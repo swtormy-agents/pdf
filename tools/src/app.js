@@ -194,7 +194,9 @@ function init() {
       case 'PDF_ENCRYPTED': return card(t('err_encrypted', { file: name }), t('err_encrypted_fix'), { full, code });
       case 'PDF_INVALID': return card(t('err_invalid', { file: name }), t(f && isImageName(f) ? 'err_invalid_fix_image' : 'err_invalid_fix'), { full, code });
       case 'UNSUPPORTED_IMAGE': case 'IMAGE_INVALID': return card(t('err_image_invalid', { file: name }), t('err_image_invalid_fix'), { full, code });
-      case 'TOO_LARGE': return extra.total ? card(t('err_total_large'), t('err_total_large_fix'), { code })
+      // core TOO_LARGE with details.reason 'decompressed': the file unpacks past the core's cap (Nathan's keys)
+      case 'TOO_LARGE': return extra.reason === 'decompressed' && f ? card(t('err_too_large_unpacked', { file: name }), t('err_too_large_unpacked_fix'), { full, code })
+        : extra.total ? card(t('err_total_large'), t('err_total_large_fix'), { code })
         : card(t('err_too_large', { file: name }), t('err_too_large_fix'), { full, code });
       case 'TOO_MANY_PAGES': return card(t('err_too_many_pages'), t('err_too_many_pages_fix', { n: num(extra.n) }), { code });
       case 'TOO_MANY_FILES': return card(t('err_too_many_files'), t(MODE === 'images' ? 'err_too_many_files_fix_images' : 'err_too_many_files_fix', { n: num(extra.n) }), { code });
@@ -259,7 +261,7 @@ function init() {
         }
       } catch (e) {
         if (e && e.code === 'CANCELLED') break;
-        errFor(e && e.code, f);
+        errFor(e && e.code, f, { reason: e && e.details && e.details.reason });
       }
     }
     cancelOpen = null;
@@ -694,9 +696,13 @@ function init() {
       hideProc(); work.hidden = false;
       if (e && e.code === 'CANCELLED') { announce(t('proc_cancelled')); flash(t('proc_cancelled')); go.focus(); }
       else {
-        const f = e && e.details && e.details.index !== undefined ? (MODE === 'images' ? byId(pages[e.details.index].f) : null) : null;
+        const d = (e && e.details) || {};
+        // which file failed: images -> page index; build -> fileId tagged by the worker; split or one file -> that file
+        const f = d.fileId !== undefined ? byId(d.fileId) : d.index !== undefined && MODE === 'images' ? byId(pages[d.index].f) : files.length === 1 ? files[0] : null;
         if (e && ['PDF_ENCRYPTED', 'PDF_INVALID', 'IMAGE_INVALID', 'UNSUPPORTED_IMAGE', 'IMAGE_TOO_LARGE'].includes(e.code) && f) errFor(e.code, f.file);
         else if (e && (e.code === 'TOO_MANY_PAGES')) errFor('TOO_MANY_PAGES', null, { n: pages.length });
+        else if (e && e.code === 'TOO_LARGE' && d.reason === 'decompressed' && f) errFor('TOO_LARGE', f.file, { reason: 'decompressed' });
+        else if (e && e.code === 'TOO_LARGE' && d.reason === 'decompressed') errFor('FAILED');
         else if (e && e.code === 'TOO_LARGE') errFor('TOO_LARGE', null, { total: true });
         else errFor('FAILED');
         errs.lastElementChild && errs.lastElementChild.querySelector('.ib').focus();

@@ -199,6 +199,39 @@ async def run(bname, p, tmp):
     await pg.screenshot(path=f'{SHOTS}/{bname}-07-encrypted-ru-375.png', full_page=True)
     await pg.close()
 
+    # ---- TOO_LARGE reason 'decompressed' (core 500 MB unpack cap): the real worker is wrapped so it reports
+    # that error for invoice.pdf at add time and for the 2nd file at merge time; plain TOO_LARGE keeps err_total_large ----
+    real_worker = open(os.path.join(HERE, '..', '..', 'assets', 'worker.js')).read()
+    shim = real_worker + """
+;(() => { const real = self.onmessage; self.onmessage = (ev) => { const m = ev.data;
+  const err = (details) => self.postMessage({ id: m.id, error: { code: 'TOO_LARGE', details } });
+  if (m.op === 'info' && m.file && m.file.name === 'invoice.pdf') return err({ reason: 'decompressed' });
+  if (m.op === 'build' && self.name !== 'x') { const ids = [...new Set(m.pages.map((p) => p.f))];
+    return err(ids.length > 1 ? { reason: 'decompressed', fileId: ids[1] } : {}); }
+  return real(ev); }; })();"""
+    for lang, want_add, want_fix in (('', 'invoice.pdf is too complex to process', 'Re-save or compress it in another PDF app'),
+                                     ('ru/', 'invoice.pdf: слишком сложный для обработки', 'Пересохраните или сожмите его'),
+                                     ('zh/', 'invoice.pdf 过于复杂，无法处理', '请在其他 PDF 程序中重新保存')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.route('**/pdf/assets/worker.js', lambda r: r.fulfill(status=200, content_type='text/javascript', body=shim))
+        await pg.goto(B + lang + 'merge-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'contract.pdf', FX + 'invoice.pdf', FX + 'scan.pdf']); await loaded(pg)
+        txt = (await pg.inner_text('#errs')).replace('\u00a0', ' ')
+        codes = await pg.eval_on_selector_all('#errs .ecard', 'e => e.map(x => x.dataset.code)')
+        ok(pre + f'decompressed {lang or "en/"}: add-time card names the file with the unpack text', codes == ['TOO_LARGE'] and want_add in txt and want_fix in txt and '100' not in txt, (codes, txt))
+        n = await pg.locator('#pages > .pc').count()
+        await pg.click('#errs .ecard button'); await pg.click('#go'); await pg.wait_for_selector('#errs .ecard', timeout=15000)
+        txt = (await pg.inner_text('#errs')).replace('\u00a0', ' ')
+        ok(pre + f'decompressed {lang or "en/"}: merge-time card names the 2nd file (scan.pdf), list kept', 'scan.pdf' in txt and want_fix in txt and await pg.locator('#pages > .pc').count() == n == 6, (txt, n))
+        if lang == '':
+            await pg.screenshot(path=f'{SHOTS}/{bname}-08-decompressed-en-1280.png')
+            await pg.click('#errs .ecard button')
+            for k in (5, 4, 3): await pg.locator('#pages > .pc').nth(k).locator('[data-act=del]').click()
+            await pg.click('#go'); await pg.wait_for_selector('#errs .ecard', timeout=15000)
+            txt = (await pg.inner_text('#errs')).replace('\u00a0', ' ')
+            ok(pre + 'plain TOO_LARGE (no reason) keeps the total-size card', 'too complex' not in txt and await pg.eval_on_selector('#errs .ecard', 'e=>e.dataset.code') == 'TOO_LARGE', txt)
+        await pg.close()
+
     # ---- images (en): GPS JPEG, PNGs, too large, wrong type; A4 and fit ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
     await pg.goto(B + 'jpg-to-pdf.html'); await ready(pg)

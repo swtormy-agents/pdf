@@ -133,6 +133,8 @@
  },
  "err_too_large": "{file} 超过 100 MB",
  "err_too_large_fix": "请将其拆分，或选择较小的文件。",
+ "err_too_large_unpacked": "{file} 过于复杂，无法处理",
+ "err_too_large_unpacked_fix": "请在其他 PDF 程序中重新保存或压缩该文件，然后重新添加。",
  "err_total_large": "总大小超过 300 MB",
  "err_total_large_fix": "请移除部分文件，分批合并。",
  "err_too_many_pages": "超过 1000 页",

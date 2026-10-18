@@ -19,6 +19,21 @@ async function rotatePages(bytes, rot) {
 // 2) The list becomes runs of consecutive pages of one file -> merge() items {bytes, pages:[indexes]}.
 // merge() counts every item against MAX_FILES and MAX_TOTAL_BYTES, so runs are merged in chunks that stay within both
 // limits and the chunks are merged again (each intermediate is smaller than its sources).
+// Errors carry details.fileId (the page's file) so the UI can name the file, e.g. TOO_LARGE reason 'decompressed'.
+async function tag(id, fn) {
+  try { return await fn(); } catch (e) {
+    if (e instanceof PdfToolError && id !== undefined) e.details = { ...(e.details || {}), fileId: id };
+    throw e;
+  }
+}
+async function mergeTagged(items) {
+  try { return await merge(items.map(({ bytes, pages }) => (pages ? { bytes, pages } : { bytes }))); } catch (e) {
+    const it = e instanceof PdfToolError && e.details && Number.isInteger(e.details.index) ? items[e.details.index] : null;
+    if (it && it.f !== undefined) e.details = { ...e.details, fileId: it.f };
+    throw e;
+  }
+}
+
 async function build(files, pages, post) {
   const ids = [...new Set(pages.map((p) => p.f))];
   const src = {};
@@ -28,8 +43,10 @@ async function build(files, pages, post) {
     const rot = {};
     pages.forEach((p) => { if (p.f === id && p.r % 360) rot[p.i] = p.r % 360; });
     if (Object.keys(rot).length) {
-      const { pages: n } = await pdfInfo(b);
-      src[id] = await organize(b, { order: [...Array(n).keys()], rotate: rot });
+      src[id] = await tag(id, async () => {
+        const { pages: n } = await pdfInfo(b);
+        return organize(b, { order: [...Array(n).keys()], rotate: rot });
+      });
     } else src[id] = b;
     post({ progress: { n: Math.round(((++step) / ids.length) * pages.length * 0.3), total: pages.length, pct: Math.round((step / ids.length) * 30) } });
   }
@@ -38,7 +55,7 @@ async function build(files, pages, post) {
     const last = runs[runs.length - 1];
     if (last && last.f === p.f) last.pages.push(p.i); else runs.push({ f: p.f, pages: [p.i] });
   }
-  let items = runs.map((r) => ({ bytes: src[r.f], pages: r.pages }));
+  let items = runs.map((r) => ({ bytes: src[r.f], pages: r.pages, f: r.f }));
   let done = 0;
   while (true) {
     const chunks = [];
@@ -49,13 +66,13 @@ async function build(files, pages, post) {
     }
     chunks.push(cur);
     if (chunks.length === 1) {
-      const out = await merge(chunks[0]);
+      const out = await mergeTagged(chunks[0]);
       post({ progress: { n: pages.length, total: pages.length, pct: 100 } });
       return out;
     }
     const next = [];
     for (const c of chunks) {
-      next.push({ bytes: await merge(c) });
+      next.push({ bytes: await mergeTagged(c) });
       done += c.reduce((s, it) => s + (it.pages ? it.pages.length : 0), 0);
       post({ progress: { n: Math.min(done, pages.length), total: pages.length, pct: 30 + Math.round((Math.min(done, pages.length) / pages.length) * 60) } });
     }

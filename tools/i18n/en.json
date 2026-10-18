@@ -140,6 +140,8 @@
  },
  "err_too_large": "{file} is over 100 MB",
  "err_too_large_fix": "Split it into parts or choose a smaller file.",
+ "err_too_large_unpacked": "{file} is too complex to process",
+ "err_too_large_unpacked_fix": "Re-save or compress it in another PDF app, then add it again.",
  "err_total_large": "Over 300 MB in total",
  "err_total_large_fix": "Remove some files and merge them separately.",
  "err_too_many_pages": "Over 1,000 pages",

@@ -8,6 +8,7 @@
     "check:css": "node scripts/check-css.mjs",
     "build:js": "node scripts/build-js.mjs",
     "check:js": "node scripts/build-js.mjs --check",
+    "test:worker": "node test/worker-tag.mjs",
     "check:licenses": "node scripts/check-licenses.mjs"
   },
   "devDependencies": {

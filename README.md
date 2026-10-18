@@ -49,6 +49,7 @@ npm run check:licenses   # licences page lists exactly the packages in the bundl
 node tools/test/fixtures.mjs           # writes tools/test/out/fx/ (gitignored)
 python3 tools/test/serve.py &          # serves the repo at http://127.0.0.1:8931/pdf/
 python3 tools/test/e2e.py chromium firefox webkit
+(cd tools && npm run test:worker)    # worker tags core errors with the failing file
 ```
 
 Needs `pip install playwright && playwright install`. Screenshots and `e2e-results.json` go to `$SHOTS` (default `/workspace/tmp/pdf-site/`).
