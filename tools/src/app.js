@@ -495,8 +495,12 @@ function init() {
     move(k, pickedFrom, false);
     announce(t('aria_live_cancelled'));
   }
-  list.addEventListener('focusout', (e) => {
-    if (picked && !list.contains(e.relatedTarget)) { const li = nodes.get(picked); if (li) li.classList.remove('picked'); picked = null; }
+  // leaving the list drops a picked page in place; checked after the event loop turn, because moving a card in the DOM
+  // fires focusout (relatedTarget null) before render() puts the focus back on it
+  list.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (picked && !list.contains(document.activeElement)) { const li = nodes.get(picked); if (li) li.classList.remove('picked'); picked = null; }
+    }, 0);
   });
 
   // pointer drag (pointer events, so mouse, pen and touch work; 8 px threshold; auto-scroll near the edges)
