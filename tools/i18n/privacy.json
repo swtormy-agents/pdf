@@ -1,0 +1,56 @@
+{
+ "en": {
+  "privacy": [
+   "**Privacy notice**",
+   "**No uploads.** Your PDF files and images are opened, combined, split and saved inside your browser. Files and file names are not sent to any server. The page's Content-Security-Policy restricts network connections to this site's own origin, and the tool makes no network requests with your files. After the page has loaded, the tool also works offline.",
+   "**Self-hosted code.** All scripts, including the PDF libraries ({pdf-lib, pdf.js}) and the pdf.js worker, are served from this same site. No third-party CDNs, fonts or trackers.",
+   "**No cookies, no analytics, no ads, no accounts.** We do not collect personal data. PDFs often contain personal data; because they never leave your device, we do not receive or process it.",
+   "**Theme setting.** The only thing this site stores in your browser is your theme choice (Light or Dark), kept locally in localStorage under the key `lic-theme`. It is never sent anywhere and is not a cookie. Choosing System removes it; you can also clear it by clearing this site's data in your browser.",
+   "**Metadata.** By default the saved PDF does not keep the document's Author, Title, Subject, Keywords or XMP metadata, and the \"Producer\" field is set to a neutral value. Images added with \"Images to PDF\" are re-encoded, so their EXIF data (including GPS location) is not included.",
+   "**Protected PDFs.** Password-protected or restricted PDFs are not unlocked. If a file is protected, remove the protection in software where you have the rights to do so, then try again.",
+   "**Hosting logs.** The site is hosted on GitHub Pages. GitHub, as the host, may log technical data such as visitor IP addresses for security and operation; see the GitHub Privacy Statement. We do not receive or use these logs.",
+   "Questions: open an issue in the GitHub repository."
+  ],
+  "disclaimer": [
+   "**Disclaimer**",
+   "This tool is provided free of charge \"as is\", without warranties of any kind. Always check the resulting file before you rely on it and keep your original. We are not liable for lost or damaged files or for any consequences of using the tool, to the extent permitted by law. Use the tool only with documents you have the right to edit.",
+   "Not affiliated with or endorsed by any device, browser or software maker; format names are used descriptively."
+  ]
+ },
+ "ru": {
+  "privacy": [
+   "**Уведомление о конфиденциальности**",
+   "**Без загрузки на сервер.** PDF-файлы и изображения открываются, объединяются, разделяются и сохраняются внутри вашего браузера. Файлы и их имена не отправляются ни на какой сервер. Политика безопасности контента (Content-Security-Policy) страницы разрешает сетевые соединения только с источником этого сайта, а инструмент не выполняет никаких сетевых запросов с вашими файлами. После загрузки страницы инструмент работает и без интернета.",
+   "**Код размещён на этом сайте.** Все скрипты, включая библиотеки для PDF ({pdf-lib, pdf.js}) и worker pdf.js, загружаются с этого же сайта. Никаких сторонних CDN, шрифтов или трекеров.",
+   "**Без cookie, аналитики, рекламы и учётных записей.** Мы не собираем персональные данные. PDF часто содержат персональные данные; поскольку файлы не покидают устройство, мы их не получаем и не обрабатываем.",
+   "**Настройка темы.** Единственное, что этот сайт хранит в вашем браузере, — выбранная тема (светлая или тёмная). Она хранится локально в localStorage под ключом `lic-theme`, никуда не отправляется и не является cookie. При выборе варианта «Системная» значение удаляется; его также можно удалить, очистив данные этого сайта в браузере.",
+   "**Метаданные.** По умолчанию в сохранённом PDF не остаются поля «Автор», «Название», «Тема (Subject)», «Ключевые слова» и метаданные XMP, а в поле «Producer» записывается нейтральное значение. Изображения, добавленные через «Изображения в PDF», перекодируются, поэтому их EXIF (включая GPS-координаты) в файл не попадает.",
+   "**Защищённые PDF.** Инструмент не снимает пароль и ограничения с защищённых PDF. Если файл защищён, снимите защиту в программе, где у вас есть на это права, и попробуйте снова.",
+   "**Журналы хостинга.** Сайт размещён на GitHub Pages. GitHub как хостинг-провайдер может записывать в журналы технические данные, например IP-адреса посетителей, в целях безопасности и обеспечения работы; см. Заявление о конфиденциальности GitHub (на английском). Мы не получаем и не используем эти журналы.",
+   "Вопросы: создайте issue в репозитории на GitHub."
+  ],
+  "disclaimer": [
+   "**Отказ от ответственности**",
+   "Инструмент предоставляется бесплатно «как есть», без каких-либо гарантий. Проверяйте получившийся файл, прежде чем на него полагаться, и сохраняйте оригинал. В пределах, допустимых законом, мы не несём ответственности за утрату или повреждение файлов и за последствия использования инструмента. Используйте инструмент только с документами, которые вы вправе изменять.",
+   "Сайт не связан с производителями устройств, браузеров и программ и не одобрен ими; названия форматов используются для описания."
+  ]
+ },
+ "zh": {
+  "privacy": [
+   "**隐私声明**",
+   "**不上传。** 您的 PDF 文件和图片均在您的浏览器内打开、合并、拆分和保存。文件和文件名不会发送到任何服务器。页面的内容安全策略（Content-Security-Policy）仅允许与本站自身的源（origin）建立网络连接，本工具不会发起任何携带您文件的网络请求。页面加载完成后，本工具也可离线使用。",
+   "**自托管代码。** 所有脚本（包括 PDF 库 {pdf-lib、pdf.js} 及 pdf.js 工作线程）均由本站提供。不使用第三方 CDN、字体或跟踪器。",
+   "**无 Cookie、无分析、无广告、无账户。** 我们不收集个人数据。PDF 文件常含有个人数据；由于文件不会离开您的设备，我们不会接收或处理这些数据。",
+   "**主题设置。** 本站在您的浏览器中存储的唯一内容是您的主题选择（浅色或深色），保存在浏览器 localStorage 中，键名为 `lic-theme`。它不会被发送到任何地方，也不是 Cookie。选择“跟随系统”会将其删除；您也可以在浏览器中清除本站数据来删除它。",
+   "**元数据。** 默认情况下，保存的 PDF 不保留文档的作者（Author）、标题（Title）、主题（Subject）、关键词（Keywords）及 XMP 元数据，“生成程序”（Producer）字段设为中性值。通过“图片转 PDF”添加的图片会重新编码，因此其 EXIF 数据（包括 GPS 位置信息）不会保留在文件中。",
+   "**受保护的 PDF。** 本工具不会解除 PDF 的密码保护或使用限制。如文件受保护，请在您有权操作的软件中解除保护后再试。",
+   "**托管日志。** 本站托管在 GitHub Pages 上。GitHub 作为托管方，可能出于安全和运营目的记录访问者 IP 地址等技术数据；请参阅《GitHub 隐私声明》（英文）。我们不接收也不使用这些日志。",
+   "如有疑问，请在 GitHub 仓库中提交 issue。"
+  ],
+  "disclaimer": [
+   "**免责声明**",
+   "本工具按“现状”免费提供，不提供任何形式的保证。在依赖生成的文件之前，请先检查，并保留原始文件。在法律允许的范围内，我们不对文件丢失或损坏以及使用本工具产生的任何后果承担责任。请仅处理您有权编辑的文档。",
+   "本站与任何设备、浏览器或软件厂商无关，亦未获其认可；格式名称仅用于描述。"
+  ]
+ }
+}

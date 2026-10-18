@@ -1,0 +1,8 @@
+.playwright-mcp/
+*.env
+secrets/
+node_modules/
+tools/node_modules/
+*.tgz
+tools/test/out/
+tools/__pycache__/

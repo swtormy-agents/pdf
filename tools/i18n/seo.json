@@ -1,0 +1,83 @@
+{
+ "en": {
+  "hub": {
+   "title": "Local PDF Tools: merge, split PDF, no upload · NoClaudKit",
+   "h1": "PDF: merge, split, reorder",
+   "meta": "Merge, split, reorder pages and turn images into PDF right in your browser. Files stay on your device. Free, no sign-up, no watermark."
+  },
+  "merge": {
+   "title": "Merge PDF without uploading, free · NoClaudKit",
+   "h1": "Merge PDF files without uploading",
+   "meta": "Combine PDF files into one in your browser. Nothing is uploaded: documents stay on your device. Free, no sign-up, no watermark."
+  },
+  "split": {
+   "title": "Split PDF without uploading, free · NoClaudKit",
+   "h1": "Split a PDF and extract pages",
+   "meta": "Split a PDF into separate files or extract the pages you need, right in your browser. No upload, no sign-up, no watermark."
+  },
+  "organize": {
+   "title": "Reorder PDF pages: rearrange, delete, rotate · NoClaudKit",
+   "h1": "Reorder, delete and rotate PDF pages",
+   "meta": "Drag pages to rearrange a PDF, delete or rotate pages, then save. Runs in your browser, files are never uploaded. Free, no watermark."
+  },
+  "jpg": {
+   "title": "JPG to PDF without uploading, free · NoClaudKit",
+   "h1": "JPG and photos to PDF",
+   "meta": "Turn JPG and PNG images into one PDF in your browser. Choose order and page size. No upload, no sign-up, no watermark."
+  }
+ },
+ "ru": {
+  "hub": {
+   "title": "Объединить и разделить PDF без загрузки на сервер — Local PDF Tools",
+   "h1": "PDF: объединить, разделить, упорядочить",
+   "meta": "Объединяйте и разделяйте PDF, меняйте порядок страниц и собирайте PDF из фото прямо в браузере. Файлы не покидают устройство. Бесплатно."
+  },
+  "merge": {
+   "title": "Объединить PDF без загрузки на сервер · NoClaudKit",
+   "h1": "Объединить PDF-файлы в один",
+   "meta": "Соедините несколько PDF в один прямо в браузере. Файлы не покидают устройство. Бесплатно, без регистрации и водяных знаков."
+  },
+  "split": {
+   "title": "Разделить PDF без загрузки на сервер · NoClaudKit",
+   "h1": "Разделить PDF и извлечь страницы",
+   "meta": "Разделите PDF на отдельные файлы или извлеките нужные страницы прямо в браузере. Файлы не покидают устройство. Бесплатно, без регистрации."
+  },
+  "organize": {
+   "title": "Поменять страницы PDF местами и удалить · NoClaudKit",
+   "h1": "Поменять порядок, удалить и повернуть страницы PDF",
+   "meta": "Перетащите страницы, чтобы поменять их местами, удалите или поверните лишние и сохраните PDF. Всё в браузере, файлы не покидают устройство."
+  },
+  "jpg": {
+   "title": "JPG и фото в PDF без загрузки на сервер · NoClaudKit",
+   "h1": "Фото и JPG в PDF",
+   "meta": "Соберите один PDF из JPG и PNG прямо в браузере. Выберите порядок и размер страницы. Файлы не покидают устройство. Бесплатно."
+  }
+ },
+ "zh": {
+  "hub": {
+   "title": "Local PDF Tools：合并、拆分 PDF，无需上传 · NoClaudKit",
+   "h1": "PDF：合并、拆分、排序",
+   "meta": "在浏览器中合并、拆分 PDF，调整页面顺序，把图片转成 PDF。文件不会离开您的设备。免费、无需注册、无水印。"
+  },
+  "merge": {
+   "title": "合并 PDF，无需上传，免费 · NoClaudKit",
+   "h1": "合并 PDF 文件",
+   "meta": "在浏览器中把多个 PDF 合并为一个，文件不会离开您的设备。免费、无需注册、无水印。"
+  },
+  "split": {
+   "title": "拆分 PDF，提取页面，无需上传 · NoClaudKit",
+   "h1": "拆分 PDF 并提取页面",
+   "meta": "在浏览器中把 PDF 拆分成多个文件或提取所需页面。文件不会离开您的设备。免费、无需注册、无水印。"
+  },
+  "organize": {
+   "title": "PDF 页面排序、删除、旋转，无需上传 · NoClaudKit",
+   "h1": "调整顺序、删除和旋转 PDF 页面",
+   "meta": "拖动页面调整 PDF 顺序，删除或旋转页面后保存。全部在浏览器中完成，文件不会离开您的设备。"
+  },
+  "jpg": {
+   "title": "图片转 PDF，JPG 转 PDF，无需上传 · NoClaudKit",
+   "h1": "JPG 和照片转 PDF",
+   "meta": "在浏览器中把 JPG 和 PNG 图片合成一个 PDF，可调整顺序和页面大小。文件不会离开您的设备。免费。"
+  }
+ }
+}

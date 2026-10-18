@@ -1,0 +1,36 @@
+{
+ "_note": "Strings not yet in Nathan's JSON. DRAFT by Ryan Foster 2026-10-17, need Nathan Price review (ru/zh) before release.",
+ "en": {
+  "faq_h": "Questions and answers",
+  "aria_split": "How to split",
+  "privacy_title": "Privacy notice – Local PDF Tools",
+  "privacy_desc": "Local PDF Tools opens and saves your PDFs inside your browser. No cookies, no analytics, no accounts.",
+  "lic_h_libs": "Bundled libraries",
+  "lic_h_texts": "Licence texts",
+  "lic_col_pkg": "Package",
+  "lic_col_ver": "Version",
+  "lic_col_lic": "Licence"
+ },
+ "ru": {
+  "faq_h": "Вопросы и ответы",
+  "aria_split": "Как разделить",
+  "privacy_title": "Уведомление о конфиденциальности — Local PDF Tools",
+  "privacy_desc": "Local PDF Tools открывает и сохраняет PDF внутри браузера. Без cookie, аналитики и учётных записей.",
+  "lic_h_libs": "Библиотеки в составе сайта",
+  "lic_h_texts": "Тексты лицензий",
+  "lic_col_pkg": "Пакет",
+  "lic_col_ver": "Версия",
+  "lic_col_lic": "Лицензия"
+ },
+ "zh": {
+  "faq_h": "常见问题",
+  "aria_split": "拆分方式",
+  "privacy_title": "隐私声明 · Local PDF Tools",
+  "privacy_desc": "Local PDF Tools 在您的浏览器中打开和保存 PDF。无 Cookie、无分析、无账户。",
+  "lic_h_libs": "内置的库",
+  "lic_h_texts": "许可证文本",
+  "lic_col_pkg": "软件包",
+  "lic_col_ver": "版本",
+  "lic_col_lic": "许可证"
+ }
+}

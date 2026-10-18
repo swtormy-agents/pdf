@@ -1,0 +1,41 @@
+{
+ "en": {
+  "lang_code": "EN",
+  "lang_nav": "Language",
+  "theme": "Theme",
+  "system": "System",
+  "light": "Light",
+  "dark": "Dark",
+  "settings_aria_system": "EN — language: English. Theme: system",
+  "settings_aria_light": "EN — language: English. Theme: light",
+  "settings_aria_dark": "EN — language: English. Theme: dark",
+  "settings_aria_mobile": "EN — language: English",
+  "legal": "Not affiliated with or endorsed by any device, browser or software maker; format names are used descriptively."
+ },
+ "ru": {
+  "lang_code": "RU",
+  "lang_nav": "Язык",
+  "theme": "Тема",
+  "system": "Системная",
+  "light": "Светлая",
+  "dark": "Тёмная",
+  "settings_aria_system": "RU — язык: русский. Тема: системная",
+  "settings_aria_light": "RU — язык: русский. Тема: светлая",
+  "settings_aria_dark": "RU — язык: русский. Тема: тёмная",
+  "settings_aria_mobile": "RU — язык: русский",
+  "legal": "Сайт не связан с производителями устройств, браузеров и программ и не одобрен ими; названия форматов используются для описания."
+ },
+ "zh": {
+  "lang_code": "中文",
+  "lang_nav": "语言",
+  "theme": "主题",
+  "system": "跟随系统",
+  "light": "浅色",
+  "dark": "深色",
+  "settings_aria_system": "中文 — 语言：中文。主题：跟随系统",
+  "settings_aria_light": "中文 — 语言：中文。主题：浅色",
+  "settings_aria_dark": "中文 — 语言：中文。主题：深色",
+  "settings_aria_mobile": "中文 — 语言：中文",
+  "legal": "本站与任何设备、浏览器或软件厂商无关，亦未获其认可；格式名称仅用于描述。"
+ }
+}

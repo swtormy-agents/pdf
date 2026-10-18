@@ -1,0 +1,215 @@
+/* Local PDF Tools: «Лагуна» theme and header shared with the converter (/workspace/local-image-converter/tools/css/input.css);
+   PDF components per design/pdf-tool/spec.md (Olivia Bennett, owner-approved 2026-10-16). */
+@import "tailwindcss" source(none);
+@source "../../*.html";
+@source "../../ru/*.html";
+@source "../../zh/*.html";
+@source "../gen.py";
+@source "../src/app.js";
+@plugin "daisyui" { themes: false; logs: false; include: properties, rootcolor, scrollbar, rootscrolllock, rootscrollgutter, svg, button, card, alert, badge, select, collapse, dropdown, menu, join, navbar, footer, link, tab, progress, modal, toast, radio, input, table; }
+@theme {
+  --breakpoint-sm: 37.5rem;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@plugin "daisyui/theme" {
+  name: "lagoon"; default: true; prefersdark: false; color-scheme: light;
+  --color-base-100: #ffffff; --color-base-200: #f0f7f7; --color-base-300: #d5e7e7; --color-base-content: #0f2a2e;
+  --color-primary: #0f766e; --color-primary-content: #ffffff;
+  --color-secondary: #155e75; --color-secondary-content: #ffffff;
+  --color-accent: #c2410c; --color-accent-content: #ffffff;
+  --color-neutral: #134e4a; --color-neutral-content: #f0fdfa;
+  --color-info: #0369a1; --color-info-content: #ffffff; --color-success: #15803d; --color-success-content: #ffffff;
+  --color-warning: #fbbf24; --color-warning-content: #1c1917; --color-error: #b91c1c; --color-error-content: #ffffff;
+  --radius-selector: 2rem; --radius-field: 0.5rem; --radius-box: 1rem;
+  --size-selector: 0.25rem; --size-field: 0.25rem; --border: 1px; --depth: 0; --noise: 0;
+}
+@plugin "daisyui/theme" {
+  name: "lagoon-dark"; default: false; prefersdark: true; color-scheme: dark;
+  --color-base-100: #0b1d20; --color-base-200: #102a2e; --color-base-300: #1d3d42; --color-base-content: #e3f2f1;
+  --color-primary: #2dd4bf; --color-primary-content: #042f2e;
+  --color-secondary: #67e8f9; --color-secondary-content: #083344;
+  --color-accent: #fb923c; --color-accent-content: #431407;
+  --color-neutral: #1f4a4f; --color-neutral-content: #e3f2f1;
+  --color-info: #38bdf8; --color-info-content: #082f49; --color-success: #4ade80; --color-success-content: #052e16;
+  --color-warning: #fbbf24; --color-warning-content: #1c1917; --color-error: #f87171; --color-error-content: #450a0a;
+  --radius-selector: 2rem; --radius-field: 0.5rem; --radius-box: 1rem;
+  --size-selector: 0.25rem; --size-field: 0.25rem; --border: 1px; --depth: 0; --noise: 0;
+}
+@layer utilities {
+  /* a11y: one focus ring on the <summary> only (limits disclosure, Olivia spec); none on the parent <details>.
+     In utilities so it beats daisyUI .collapse (components layer), which rings the details and strips the summary outline. */
+  summary:focus-visible, .collapse:is(details) > summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  details:focus, details:focus-visible, details:focus-within, .collapse:is(details):has(summary:focus-visible) { outline: none; }
+  .select { border-color: color-mix(in oklab, var(--color-base-content) 55%, transparent); }
+  .doc main { overflow-wrap: break-word; }
+  /* daisyUI .menu removes the outline on :focus-visible; selectors v2 needs a visible ring on every stop (spec §4) */
+  .settings .menu li > a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .settings .menu li > a.menu-active { @apply bg-base-200 text-base-content font-semibold; }
+  .settings.kbd .theme-opt:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .modetabs .tab:focus-visible, .mcard:focus-visible, .drop:focus-within, .pick:focus-visible, .ib:focus-visible, .btn:focus-visible, a:focus-visible, .radio:focus-visible, .input:focus-visible, .select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+@layer components {
+  .doc h1 { @apply text-[clamp(1.5rem,7vw,1.75rem)] sm:text-4xl font-bold tracking-tight text-balance mb-6; }
+  .doc h2 { @apply text-xl font-semibold mt-8 mb-3; }
+  .doc h3 { @apply text-base font-semibold mt-6 mb-2 break-words; }
+  .doc p { @apply leading-relaxed my-3 max-w-3xl; }
+  .doc main { overflow-wrap: break-word; }
+  .doc main a:not(.btn) { @apply link link-primary break-words; }
+  .doc code { @apply font-mono text-sm bg-base-200 rounded px-1 break-words; }
+  .doc pre.lic { @apply font-mono text-xs bg-base-200 rounded-box p-3 sm:p-4 whitespace-pre-wrap break-words max-w-full; }
+  .h1 { @apply text-[1.75rem] leading-tight sm:text-[2.5rem] font-bold tracking-tight text-balance; scroll-margin-top: 1rem; }
+  .lede { @apply mt-3 text-base sm:text-lg text-base-content/80 max-w-2xl text-pretty; }
+  /* hero (spec §2a) */
+  .hero { @apply relative grid gap-6 items-center; isolation: isolate; }
+  .hero::before { content: ""; @apply absolute -z-10 pointer-events-none hidden sm:block; inset: -32px -40px auto auto; width: 520px; height: 420px; max-width: 100%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent); }
+  .hero .art { @apply hidden; }
+  @media (min-width: 1000px) { .hero { grid-template-columns: 1.15fr .85fr; } .hero .art { @apply block w-full; aspect-ratio: 4/3; } }
+  /* illustrations: theme tokens only (no style attributes) */
+  .ill .pg { fill: var(--color-base-100); stroke: var(--color-base-300); stroke-width: 1.5; }
+  .ill .ln { fill: var(--color-base-300); }
+  .ill .ln2 { fill: color-mix(in oklab, var(--color-primary) 35%, var(--color-base-300)); }
+  .ill .ac, .ill .pdf { fill: var(--color-primary); }
+  .ill .pdft { fill: var(--color-primary-content); }
+  .ill .acs { stroke: var(--color-primary); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .ill .sky { fill: color-mix(in oklab, var(--color-primary) 18%, var(--color-base-100)); }
+  .ill .hill { fill: color-mix(in oklab, var(--color-primary) 45%, var(--color-base-100)); }
+  /* dropzone */
+  .drop { @apply mt-6 flex flex-col items-center gap-2 rounded-box border-2 border-dashed border-base-content/60 bg-base-200 px-3 py-5 sm:px-4 sm:py-10 text-center cursor-pointer; touch-action: manipulation; }
+  .drop:hover, .drop.over { @apply border-primary; }
+  .drop.over { @apply bg-base-300; }
+  .drop .upl { @apply hidden sm:block; }
+  .dz-t { @apply text-lg font-semibold text-balance; }
+  .dz-h { @apply text-sm text-base-content/80 text-pretty; }
+  .drop .btn { @apply mt-2; }
+  .app[data-busy] .drop, .drop[aria-disabled=true] { @apply opacity-60 pointer-events-none; }
+  /* mode tabs: 2x2 grid below 600px */
+  .modetabs { @apply flex-nowrap overflow-x-auto; }
+  .modetabs .tab { @apply whitespace-nowrap font-medium; }
+  @media (max-width: 599px) { .modetabs { @apply grid grid-cols-2 overflow-visible; } .modetabs .tab { @apply whitespace-normal text-center h-auto py-2; } }
+  /* mode cards */
+  .modecards { @apply grid gap-3 mt-8 grid-cols-1 sm:grid-cols-2; }
+  @media (min-width: 1000px) { .modecards { @apply grid-cols-4; } }
+  .mcard { @apply grid items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 min-h-11 h-full no-underline text-base-content hover:border-primary; grid-template-columns: 64px 1fr; transition: border-color .15s; }
+  .mcard .pv { @apply flex items-center justify-center rounded-field bg-base-200 size-16; }
+  .mcard .pv svg { @apply size-14; }
+  .mcard .tx { @apply flex flex-col min-w-0; }
+  .mcard .mt { @apply font-semibold; }
+  .mcard .md { @apply text-sm text-base-content/80; }
+  @media (min-width: 600px) { .mcard { @apply p-0 overflow-hidden items-start content-start; grid-template-columns: 1fr; } .mcard .pv { @apply w-auto h-[132px] rounded-none border-b border-base-300; } .mcard .pv svg { @apply w-auto h-28; } .mcard .tx { @apply px-4 pt-1 pb-4; } }
+  /* toolbar */
+  .tbar { @apply flex flex-wrap items-center gap-2 mt-6; }
+  .counts { @apply me-auto text-sm text-base-content/80 tabular-nums; }
+  .tbtn { @apply flex flex-wrap items-center gap-2; }
+  .metanote { @apply flex items-start gap-2 text-sm mt-2; }
+  .select { background-color: var(--color-base-100); color: var(--color-base-content); }
+  /* error cards (spec «Errors») */
+  .errs { @apply flex flex-col gap-2; }
+  .errs:not(:empty) { @apply mt-6; }
+  .ecard { @apply flex items-start gap-3 rounded-box border border-error bg-base-100 p-3 sm:p-4; }
+  .ecard > svg { @apply size-6 shrink-0 text-error mt-0.5; }
+  .ecard .eb { @apply flex-1 min-w-0; }
+  .ecard .et { @apply font-semibold break-words; }
+  .ecard .ef { @apply text-sm text-base-content/80; }
+  .ecard.note { @apply border-info; }
+  .ecard.note > svg { @apply text-info; }
+  /* page grid (>=600) and rows (<600) */
+  .pages { @apply grid gap-3 mt-3; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .pc { @apply relative flex flex-col rounded-box border border-base-300 bg-base-100 p-2 select-none; touch-action: pan-y; }
+  .pc.sel { @apply border-primary; box-shadow: inset 0 0 0 1px var(--color-primary); }
+  .pc.picked { @apply border-primary shadow-lg; }
+  .pc.dragging { @apply z-20 shadow-xl border-primary pointer-events-none; }
+  .pc.slot { @apply border-2 border-dashed border-primary bg-base-200; }
+  .pc.slot > * { @apply invisible; }
+  .pick { @apply relative block w-full rounded-field text-start cursor-grab; touch-action: pan-y; }
+  .th { @apply relative grid place-items-center w-full overflow-hidden rounded-field border border-base-300 bg-base-200; aspect-ratio: 3/4; contain: strict; }
+  .th img { @apply block max-w-full max-h-full object-contain bg-white; transition: transform .15s; }
+  .th.r90 img { transform: rotate(90deg); } .th.r180 img { transform: rotate(180deg); } .th.r270 img { transform: rotate(270deg); }
+  .th.sk { background: linear-gradient(100deg, var(--color-base-200) 40%, var(--color-base-300) 50%, var(--color-base-200) 60%) 0 0 / 200% 100%; }
+  .no { @apply absolute top-1.5 start-1.5 z-10 badge badge-sm bg-primary text-primary-content border-0 font-bold tabular-nums; }
+  .chk { @apply absolute top-1.5 end-1.5 z-10 hidden size-6 rounded-full bg-primary text-primary-content place-items-center; }
+  .pc.sel .chk { @apply grid; }
+  .chk svg { @apply size-4; }
+  .lb { @apply text-[0.8125rem] mx-0.5 mt-1.5 truncate; }
+  .lb b { @apply font-semibold; }
+  .lb2 { @apply hidden; }
+  .ctl { @apply flex justify-between mt-1; }
+  .ib { @apply btn btn-ghost btn-square min-h-11 min-w-11 size-11 p-0; }
+  .ib svg { @apply size-5; }
+  .ib.del { @apply text-error; }
+  .ib.mv-v { @apply hidden; }
+  .split .pc .ctl, .app[data-mode=split] .ctl { @apply hidden; }
+  @media (max-width: 599px) {
+    .pages { @apply flex flex-col gap-2; }
+    .pc { @apply grid items-center gap-x-2.5 gap-y-1; grid-template-columns: 48px 1fr; }
+    .pick { @apply contents; }
+    .th { @apply w-12; }
+    .no { @apply hidden; }
+    .lb { @apply hidden; }
+    .lb2 { @apply block min-w-0 text-sm; }
+    .lb2 .n1 { @apply block truncate font-medium; }
+    .lb2 .n2 { @apply block text-[0.8125rem] text-base-content/80; }
+    .ctl { @apply justify-start gap-0.5 mt-0; grid-column: 1 / -1; }
+    .ctl .del { @apply ms-auto; }
+    .ib.mv-h { @apply hidden; }
+    .ib.mv-v { @apply inline-flex; }
+    .chk { @apply top-auto end-auto; }
+  }
+  /* drag: only the thumbnail takes touch drags (>=600); labels and controls keep page scrolling */
+  @media (min-width: 600px) { .pick .th { touch-action: none; } }
+  html.dragging-page, html.dragging-page * { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+  .ecard .ib { @apply -my-1.5 -me-1.5; }
+  .toast .alert { @apply flex flex-wrap items-center gap-3 bg-base-100 border border-base-300 text-base-content; }
+  .pbar { @apply flex justify-end gap-2 mt-5 pt-4 border-t border-base-300; }
+  @media (max-width: 599px) { .pbar .btn { @apply flex-1; } }
+  /* split */
+  .filerow { @apply flex flex-wrap items-center gap-3 mt-6; }
+  .filerow > div { @apply me-auto; }
+  .fname { @apply font-semibold break-words; }
+  .opt { @apply rounded-box p-2 sm:p-3; }
+  .opt:has(input:checked) { @apply bg-base-200; }
+  .optl { @apply flex items-center gap-3 min-h-11 cursor-pointer; }
+  .optb { @apply ps-9; }
+  .sres { @apply mt-2 mx-2 text-sm; }
+  .sres:empty { @apply hidden; }
+  .input[aria-invalid=true] { @apply border-error; }
+  /* done */
+  .acts { @apply flex flex-wrap gap-2 mt-4; }
+  .acts > * { flex: 1 1 200px; }
+  @media (min-width: 600px) { .acts > * { flex: none; } }
+  .toast .alert { @apply shadow-lg; }
+  .faq .collapse-content p { @apply max-w-3xl; }
+  /* Header settings menu, selectors v2 variant B «Одно меню» (spec /workspace/design/selectors-v2/spec.md). Icons = same-origin SVG files
+     (assets/icons/) used as masks: CSP img-src has no data:, so the converter's data URIs would be blocked; colour = currentColor. */
+  .settings { --ico-system: url("../assets/icons/theme-system.svg"); --ico-light: url("../assets/icons/theme-light.svg"); --ico-dark: url("../assets/icons/theme-dark.svg"); }
+  .settings summary { list-style: none; }
+  .settings summary::-webkit-details-marker { display: none; }
+  .settings summary, .settings .menu a, .settings .theme-opt { @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; }
+  .settings .ico-theme { @apply shrink-0 bg-current; mask: var(--ico-system) center / contain no-repeat; }
+  .settings summary.is-light .ico-theme { mask-image: var(--ico-light); }
+  .settings summary.is-dark .ico-theme { mask-image: var(--ico-dark); }
+  .settings .menu a { @apply flex items-center gap-2 text-sm hover:bg-base-200; }
+  .settings fieldset { @apply m-0 p-0 border-0 min-w-0; }
+  .settings .theme-opt { @apply min-w-11 h-11 border-0 shadow-none checked:bg-primary checked:text-primary-content; }
+  .settings .theme-opt::after { content: ""; @apply block size-4 bg-current; mask: var(--ico-system) center / contain no-repeat; }
+  .settings .theme-opt[value=light]::after { mask-image: var(--ico-light); }
+  .settings .theme-opt[value=dark]::after { mask-image: var(--ico-dark); }
+}
+/* Windows High Contrast / forced colours: mask-drawn icons paint with background-color, which forced colours would reset;
+   pin them to system colours so they stay visible. Inline SVG icons (globe, chevron, check) use currentColor strokes. */
+@media (forced-colors: active) {
+  .settings .ico-theme { forced-color-adjust: none; background-color: ButtonText; }
+  .settings .theme-opt::after { forced-color-adjust: none; background-color: ButtonText; }
+  .settings .ico-globe, .settings .ico-chev, .settings svg { forced-color-adjust: auto; stroke: CanvasText; }
+  .settings summary .ico-globe, .settings summary .ico-chev { stroke: ButtonText; }
+  .settings .sep { forced-color-adjust: none; background-color: ButtonText; }
+  .settings .theme-opt:checked { outline: 2px solid Highlight; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .th.sk { animation: th-sk 1.8s ease-in-out infinite; }
+  .pc.dragging { transform: rotate(-2deg); }
+}
+@keyframes th-sk { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
