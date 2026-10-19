@@ -16,7 +16,7 @@ and turn JPG/PNG images into a PDF, entirely in the browser. Files are processed
 | `build/app.css` | Tailwind 4 + daisyUI 5 build of `tools/css/input.css` |
 | `theme.js`, `assets/icons/` | theme switcher and its icons |
 | `tools/gen.py` | page generator (runs `sync_i18n.py` first; strings live with their owners under `/workspace/i18n`, `/workspace/seo`, `/workspace/company/legal`) |
-| `tools/i18n/` | synced copies of the UI, SEO, FAQ and privacy strings + `site.json` |
+| `tools/i18n/` | synced copies of the UI, SEO, FAQ and privacy strings |
 | `tools/src/` | UI (`app.js`), processing worker (`worker.js`), ZIP writer (`zip.js`) |
 | `tools/scripts/` | JS build/check, CSS check, licence check |
 | `tools/test/` | fixtures, local server, Playwright end-to-end suite |

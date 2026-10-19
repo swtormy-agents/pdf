@@ -198,9 +198,13 @@ function init() {
       case 'TOO_LARGE': return extra.reason === 'decompressed' && f ? card(t('err_too_large_unpacked', { file: name }), t('err_too_large_unpacked_fix'), { full, code })
         : extra.total ? card(t('err_total_large'), t('err_total_large_fix'), { code })
         : card(t('err_too_large', { file: name }), t('err_too_large_fix'), { full, code });
-      case 'TOO_MANY_PAGES': return card(t('err_too_many_pages'), t('err_too_many_pages_fix', { n: num(extra.n) }), { code });
-      case 'TOO_MANY_FILES': return card(t('err_too_many_files'), t(MODE === 'images' ? 'err_too_many_files_fix_images' : 'err_too_many_files_fix', { n: num(extra.n) }), { code });
+      case 'TOO_MANY_PAGES': return card(t('err_too_many_pages'), t('err_too_many_pages_fix', { n: num(extra.n) }, extra.n), { code });
+      case 'TOO_MANY_FILES': return card(t('err_too_many_files'), t(MODE === 'images' ? 'err_too_many_files_fix_images' : 'err_too_many_files_fix', { n: num(extra.n) }, extra.n), { code });
       case 'IMAGE_TOO_LARGE': return card(t('err_image_too_large', { file: name }), t('err_image_too_large_fix'), { full, code });
+      // split limits (approved 18.10): one part > 1000 pages, all parts > 5000 pages, > 50 parts
+      case 'SPLIT_PART_PAGES': return card(t('err_split_part_pages'), t('err_split_part_pages_fix'), { code });
+      case 'SPLIT_TOTAL_PAGES': return card(t('err_split_total_pages'), t('err_split_total_pages_fix'), { code });
+      case 'SPLIT_PARTS': return card(t('err_split_parts'), t('err_split_parts_fix'), { code });
       case 'PAGE_RANGE': return card(t('err_range'), t('err_range_fix', { n: num(extra.n || 0) }, extra.n || 0), { code });
       default: return card(t('err_failed'), t('err_failed_fix'), { code: 'FAILED' });
     }
@@ -588,6 +592,26 @@ function init() {
   // ---------- split ----------
   const rangesIn = $('ranges'), everyIn = $('every'), rerr = $('rerr'), sres = $('sres'), xcount = $('xcount');
   function splitMode() { const r = document.querySelector('input[name=smode]:checked'); return r ? r.value : 'ranges'; }
+  // Split limits (approved 18.10), from the core's LIMITS: MAX_PAGES pages per part, MAX_SPLIT_TOTAL_PAGES over all
+  // parts, MAX_SPLIT_PARTS parts. Checked here while typing; the core checks them again before copying any page.
+  const SPLIT = { part: LIMITS.MAX_PAGES, total: LIMITS.MAX_SPLIT_TOTAL_PAGES, parts: LIMITS.MAX_SPLIT_PARTS };
+  // -> 'SPLIT_PARTS' | 'SPLIT_PART_PAGES' | 'SPLIT_TOTAL_PAGES' | null (extract = one part)
+  function splitOver(plan) {
+    const sizes = plan.order ? [plan.order.length] : plan.groups.map(([a, b]) => b - a + 1);
+    if (sizes.length > SPLIT.parts) return 'SPLIT_PARTS';
+    if (sizes.some((n) => n > SPLIT.part)) return 'SPLIT_PART_PAGES';
+    if (plan.total > SPLIT.total) return 'SPLIT_TOTAL_PAGES';
+    return null;
+  }
+  // core TOO_MANY_PAGES / TOO_MANY_FILES during split -> one of the three split cards, chosen by the core's
+  // details.limit ('part' | 'total' | 'parts'); without details, the plan is re-checked.
+  const SPLIT_ERR = { part: 'SPLIT_PART_PAGES', total: 'SPLIT_TOTAL_PAGES', parts: 'SPLIT_PARTS' };
+  function splitErrCode(e, plan) {
+    const d = (e && e.details) || {};
+    if (SPLIT_ERR[d.limit]) return SPLIT_ERR[d.limit];
+    if (e && e.code === 'TOO_MANY_FILES') return 'SPLIT_PARTS';
+    return (plan && splitOver(plan)) || 'SPLIT_PART_PAGES';
+  }
   let splitPlan = null; // {groups:[[from,to]...]} | {order:[...]}
   function renderSplit() {
     const f = files[0];
@@ -630,11 +654,11 @@ function init() {
       if (order.length) splitPlan = { order, total: order.length };
     }
     if (m === 'ranges' && rerr.parentElement !== rangesIn.closest('.optb')) rangesIn.closest('.optb').appendChild(rerr);
-    if (splitPlan && splitPlan.total > LIMITS.MAX_PAGES) {
-      sres.textContent = '';
-      const n = splitPlan.total; splitPlan = null;
-      rerr.hidden = false; rerr.textContent = t('err_too_many_pages') + ' · ' + t('err_too_many_pages_fix', { n: num(n) });
-    }
+    const over = splitPlan && splitOver(splitPlan);
+    if (over) {
+      sres.textContent = ''; splitPlan = null; rerr.hidden = false; rerr.dataset.code = over;
+      const k = 'err_' + over.toLowerCase(); rerr.textContent = t(k) + ' · ' + t(k + '_fix');
+    } else delete rerr.dataset.code;
     rangesIn.setAttribute('aria-describedby', rerr.hidden ? 'rhint' : 'rhint rerr');
     go.disabled = !splitPlan || busy;
   }
@@ -700,6 +724,7 @@ function init() {
         // which file failed: images -> page index; build -> fileId tagged by the worker; split or one file -> that file
         const f = d.fileId !== undefined ? byId(d.fileId) : d.index !== undefined && MODE === 'images' ? byId(pages[d.index].f) : files.length === 1 ? files[0] : null;
         if (e && ['PDF_ENCRYPTED', 'PDF_INVALID', 'IMAGE_INVALID', 'UNSUPPORTED_IMAGE', 'IMAGE_TOO_LARGE'].includes(e.code) && f) errFor(e.code, f.file);
+        else if (e && MODE === 'split' && ['TOO_MANY_PAGES', 'TOO_MANY_FILES'].includes(e.code)) errFor(splitErrCode(e, splitPlan));
         else if (e && (e.code === 'TOO_MANY_PAGES')) errFor('TOO_MANY_PAGES', null, { n: pages.length });
         else if (e && e.code === 'TOO_LARGE' && d.reason === 'decompressed' && f) errFor('TOO_LARGE', f.file, { reason: 'decompressed' });
         else if (e && e.code === 'TOO_LARGE' && d.reason === 'decompressed') errFor('FAILED');
@@ -719,11 +744,11 @@ function init() {
     resultUrl = URL.createObjectURL(out.blob);
     const dl = $('dl'); dl.href = resultUrl; dl.download = out.name;
     dl.textContent = out.kind === 'zip' ? t('download_zip', { n: num(out.files) }, out.files) : t('download_pdf');
-    const msg = MODE === 'merge' ? t('done_merge', { pages: num(out.pages), files: num(out.files) })
-      : MODE === 'organize' ? t('done_reorder') : MODE === 'images' ? t('done_images', { n: num(out.pages) })
-      : out.kind === 'extract' ? t('done_extract', { n: num(out.pages) }) : t('done_split', { n: num(out.files || 1) });
+    const msg = MODE === 'merge' ? t('done_merge', { pages: num(out.pages), files: num(out.files) }, out.pages)
+      : MODE === 'organize' ? t('done_reorder') : MODE === 'images' ? t('done_images', { n: num(out.pages) }, out.pages)
+      : out.kind === 'extract' ? t('done_extract', { n: num(out.pages) }, out.pages) : t('done_split', { n: num(out.files || 1) }, out.files || 1);
     $('dtext').textContent = msg;
-    $('dname').textContent = t('result_line', { name: out.name, pages: num(out.pages), size: size(out.blob.size) });
+    $('dname').textContent = t('result_line', { name: out.name, pages: num(out.pages), size: size(out.blob.size) }, out.pages);
     done.hidden = false; work.hidden = true; proc.hidden = true;
     dl.focus();
   }

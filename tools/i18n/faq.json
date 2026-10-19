@@ -99,7 +99,7 @@
    },
    {
     "q": "Which image formats can I convert to PDF?",
-    "a": "You can convert JPG and PNG images. Each image can be up to 50 megapixels."
+    "a": "You can convert JPG and PNG images. Each image can be up to 50 megapixels. If your photos are in HEIC format, convert them to JPG first with our HEIC to JPG converter (link: https://noclaudkit.com/image-converter/heic-to-jpg.html)."
    },
    {
     "q": "Can I combine several JPG images into one PDF?",
@@ -219,7 +219,7 @@
    },
    {
     "q": "Какие форматы изображений можно перевести в PDF?",
-    "a": "JPG и PNG. Каждое изображение — до 50 мегапикселей."
+    "a": "JPG и PNG. Каждое изображение — до 50 мегапикселей. Если фото в формате HEIC, сначала переведите их в JPG с помощью нашего конвертера HEIC в JPG."
    },
    {
     "q": "Можно ли собрать несколько JPG в один PDF?",
@@ -339,7 +339,7 @@
    },
    {
     "q": "哪些图片格式可以转换为 PDF？",
-    "a": "支持 JPG 和 PNG 图片，每张图片不超过 5000 万像素。"
+    "a": "支持 JPG 和 PNG 图片，每张图片不超过 5000 万像素。如果您的照片是 HEIC 格式，请先用我们的 HEIC 转 JPG 转换器将其转换为 JPG。"
    },
    {
     "q": "可以把多张 JPG 图片合成一个 PDF 吗？",

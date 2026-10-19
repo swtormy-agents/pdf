@@ -84,9 +84,12 @@
   .drop .btn { @apply mt-2; }
   .app[data-busy] .drop, .drop[aria-disabled=true] { @apply opacity-60 pointer-events-none; }
   /* mode tabs: 2x2 grid below 600px */
-  .modetabs { @apply flex-nowrap overflow-x-auto; }
-  .modetabs .tab { @apply whitespace-nowrap font-medium; }
-  @media (max-width: 599px) { .modetabs { @apply grid grid-cols-2 overflow-visible; } .modetabs .tab { @apply whitespace-normal text-center h-auto py-2; } }
+  /* .tabs.modetabs: daisyUI .tabs{display:flex;flex-wrap:wrap} has the same specificity as .modetabs (UX review 38054b6 #1) */
+  .tabs.modetabs { @apply flex-nowrap overflow-x-auto; }
+  .tabs.modetabs > .tab { @apply whitespace-nowrap font-medium; }
+  /* inactive tabs: base-content/80 (7.55:1 light, 8.87:1 dark on base-200; daisyUI default 50% fails, UX #2) */
+  .tabs.modetabs > .tab:not(.tab-active) { @apply text-base-content/80; }
+  @media (max-width: 599px) { .tabs.modetabs { @apply grid grid-cols-2 overflow-visible; } .tabs.modetabs > .tab { @apply whitespace-normal text-center h-auto py-2; } }
   /* mode cards */
   .modecards { @apply grid gap-3 mt-8 grid-cols-1 sm:grid-cols-2; }
   @media (min-width: 1000px) { .modecards { @apply grid-cols-4; } }

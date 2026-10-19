@@ -6,3 +6,4 @@ tools/node_modules/
 *.tgz
 tools/test/out/
 tools/__pycache__/
+__pycache__/

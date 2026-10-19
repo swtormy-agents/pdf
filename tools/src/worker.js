@@ -98,6 +98,7 @@ self.onmessage = async (ev) => {
         result = await organize(b, { order: m.order });
       } else {
         post({ progress: { n: 0, total: m.total, pct: 5 } });
+        // the core checks the split limits (per part, all parts, number of parts) before copying any page
         const parts = await split(b, m.groups);
         result = parts.map((x) => ({ pages: x.pages, bytes: x.bytes }));
       }

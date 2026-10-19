@@ -6,7 +6,7 @@ strings are always read fresh). Sources (read-only, never edited here):
   SEO en      /workspace/seo/pdf-tool-keywords-structure.md §8 en  (Lucas Gray)
   FAQ         /workspace/seo/pdf-tool-faq-en.md, /workspace/i18n/pdf-tool/faq/faq-{ru,zh}.md
   Privacy     /workspace/company/legal/pdf-privacy-disclaimer.md   (Sarah Mitchell)
-  Header/legal line: /workspace/local-image-converter/tools/i18n/{lang}.json (same component as the converter)
+  Header/legal line + pair_h1 (HEIC link anchor): /workspace/local-image-converter/tools/i18n/{lang}.json (same component as the converter)
 Only public text is extracted (no author notes). If a source dir is missing (e.g. CI), the committed copies are used."""
 import os,re,json,sys
 os.chdir(os.path.join(os.path.dirname(__file__),'..'))
@@ -55,7 +55,8 @@ def main():
     dump('seo.json',{l:seo[l] for l in LANGS})
     dump('faq.json',{'en':faq(f'{W}/seo/pdf-tool-faq-en.md','Q:','A:'),'ru':faq(f'{I18N}/faq/faq-ru.md','В:','О:'),'zh':faq(f'{I18N}/faq/faq-zh.md','问：','答：')})
     dump('privacy.json',privacy(f'{W}/company/legal/pdf-privacy-disclaimer.md'))
-    keys=['lang_code','lang_nav','theme','system','light','dark','settings_aria_system','settings_aria_light','settings_aria_dark','settings_aria_mobile','legal']
+    # pair_h1: the converter's H1 pattern for its pair pages, used as the anchor of the jpg-to-pdf -> heic-to-jpg link
+    keys=['lang_code','lang_nav','theme','system','light','dark','settings_aria_system','settings_aria_light','settings_aria_dark','settings_aria_mobile','legal','pair_h1']
     dump('header.json',{l:{k:json.load(open(f'{W}/local-image-converter/tools/i18n/{l}.json',encoding='utf-8'))[k] for k in keys} for l in LANGS})
     print('sync_i18n: ok')
 if __name__=='__main__': main()

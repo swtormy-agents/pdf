@@ -9,5 +9,7 @@ async function sized(base, n) { const d = await PDFDocument.create(); for (let k
 w('contract.pdf', await sized(100, 3)); w('invoice.pdf', await sized(200, 2)); w('scan.pdf', await sized(300, 3)); w('long24.pdf', await plainPdf(24));
 w('bank-statement.pdf', encryptedPdf()); w('evil.pdf', await evilPdf()); w('broken.pdf', corruptBytes(2000));
 w('photo-gps.jpg', exifJpeg()); w('meta.png', metadataPng()); w('plain.png', plainPng(40, 30)); w('huge.jpg', jpegWithSize(10000, 6000));
+// 6000 small pages for the split limits (1000 per part, 5000 total, 50 parts)
+{ const d6 = await PDFDocument.create(); for (let k = 0; k < 6000; k++) d6.addPage([200, 200]); w('long6000.pdf', await d6.save()); }
 w('notes.txt', new TextEncoder().encode('hello'));
 console.log('fixtures in', d);

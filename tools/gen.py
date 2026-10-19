@@ -4,7 +4,7 @@ Run: python3 tools/gen.py   (re-running without source changes gives zero diff).
 Strings: tools/i18n/ (synced from their owners by tools/sync_i18n.py at the start of every run; see that file).
 Plain-text strings are HTML-escaped here; U+00A0 appears only in visible text, never in tags, attributes, <title>, meta
 or JSON-LD (plain_meta() enforces it)."""
-import os,re,json,html,subprocess,sys
+import os,re,json,html,subprocess,sys,hashlib
 os.chdir(os.path.join(os.path.dirname(__file__),'..'))
 sys.path.insert(0,'tools'); import sync_i18n; sync_i18n.main()
 
@@ -19,8 +19,8 @@ LANG_CODE={'en':'EN','ru':'RU','zh':''}
 OG_LOCALE={'en':'en_US','ru':'ru_RU','zh':'zh_CN'}
 NB='\u00a0'
 def load(n): return json.load(open(f'tools/i18n/{n}',encoding='utf-8'))
-UI={l:load(f'{l}.json') for l in LANGS}; SEO=load('seo.json'); FAQ=load('faq.json'); PRIV=load('privacy.json'); HDR=load('header.json'); SITE=load('site.json')
-T={l:{**UI[l],**HDR[l],**SITE[l]} for l in LANGS}
+UI={l:load(f'{l}.json') for l in LANGS}; SEO=load('seo.json'); FAQ=load('faq.json'); PRIV=load('privacy.json'); HDR=load('header.json')
+T={l:{**UI[l],**HDR[l]} for l in LANGS}
 
 # page file -> (seo key, app mode, faq key)
 TOOLS=[('index.html','hub','merge'),('merge-pdf.html','merge','merge'),('split-pdf.html','split','split'),('organize-pdf.html','organize','organize'),('jpg-to-pdf.html','jpg','images')]
@@ -31,12 +31,21 @@ DOC=['privacy.html','licenses.html']
 e=lambda s:html.escape(str(s),quote=True)
 RU_SHORT='не|и|с|в|на|к|о|у|а|из|за|по|от|до|я|ни|но|же|ли'
 def ru_nbsp(s): return re.sub(r'(?<![\w\u0400-\u04ff])('+RU_SHORT+r') ',lambda m:m.group(1)+NB,s,flags=re.I)
-def vis(lang,s):  # visible text: ru gets U+00A0 after short words (sources for head/meta are plain-space)
-    return ru_nbsp(s) if lang=='ru' else s
-def plain(s): return s.replace(NB,' ')
+NBH='\u2011'
+def vis(lang,s):  # visible text: ru gets U+00A0 after short words and U+2011 in «PDF-…» (sources for head/meta are plain-space)
+    return ru_nbsp(s).replace('PDF-','PDF'+NBH) if lang=='ru' else s
+def plain(s): return s.replace(NB,' ').replace('\u2011','-')
 def lp(l): return '' if l=='en' else l+'/'
 def url(l,p): return BASE+lp(l)+('' if p=='index.html' else p)
 def rel(p): return './' if p=='index.html' else p
+OG_SEP={'en':'. ','ru':'. ','zh':'。'}
+def og_img(lang):  # absolute, same BASE as canonical; ?v= = sha256[:8] of the committed PNG (tools/scripts/og.py), as in the converter
+    with open(f'assets/og/og-{lang}.png','rb') as f: b=f.read()
+    assert b[:8]==b'\x89PNG\r\n\x1a\n' and int.from_bytes(b[16:20],'big')==1200 and int.from_bytes(b[20:24],'big')==630, f'og-{lang}.png must be a 1200x630 PNG'
+    return BASE+f'assets/og/og-{lang}.png?v={hashlib.sha256(b).hexdigest()[:8]}'
+def og_alt(lang):  # plain text of the OG image: hub H1 + promise line (both approved UI strings)
+    a=plain(T[lang]['h1_home']).strip()
+    return a+('' if a[-1:] in '.。!?！？' else OG_SEP[lang])+plain(T[lang]['lede']).strip()
 
 # ---------- icons (from the approved prototype, design/pdf-tool/proto/gen.py) ----------
 def svg(body,cls='size-5',sw='2',fill='none'): return f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="{fill}" stroke="currentColor" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round">{body}</svg>'
@@ -95,6 +104,8 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
 <link rel="canonical" href="{url(lang,page)}">
 {alts}
 <meta property="og:type" content="website"><meta property="og:site_name" content="Local PDF Tools"><meta property="og:locale" content="{OG_LOCALE[lang]}"><meta property="og:title" content="{e(plain(title))}"><meta property="og:description" content="{e(plain(desc))}"><meta property="og:url" content="{url(lang,page)}">
+<meta property="og:image" content="{og_img(lang)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="{e(og_alt(lang))}">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{og_img(lang)}"><meta name="twitter:image:alt" content="{e(og_alt(lang))}">
 <meta name="color-scheme" content="light dark">
 {ld}<script src="{P}theme.js"></script><link rel="icon" href="{P}favicon.svg"><link rel="stylesheet" href="{P}build/app.css"></head><body class="min-h-screen flex flex-col bg-base-100 text-base-content antialiased{' doc' if doc else ''}"{bodyattrs}>
 <header class="top bg-base-100 border-b border-base-300"><div class="navbar mx-auto max-w-5xl px-3 min-[360px]:px-4 sm:px-6 gap-2 min-h-16">
@@ -108,7 +119,7 @@ def foot(lang,page):
     links=[(ROOT+lp(lang),t['f_pdf'],page=='index.html'),('/image-converter/'+lp(lang),t['f_conv'],False),('privacy.html',t['f_priv'],page=='privacy.html'),
            (REPO,t['f_src'],False),(REPO+'/issues',t['f_contact'],False),('licenses.html',t['f_lic'],page=='licenses.html')]
     return (f'</main>\n<footer class="bg-base-200 mt-12"><div class="footer sm:footer-horizontal mx-auto max-w-5xl px-4 sm:px-6 py-6 text-base-content"><div class="max-w-xl text-sm space-y-1"><p>{e(t["foot"])}</p><p>{e(t["legal"])}</p></div><ul class="flinks flex flex-wrap gap-x-4">'
-            +''.join(f'<li><a class="link link-hover min-h-11 inline-flex items-center whitespace-nowrap" href="{h}"'+(' aria-current="page"' if cur else '')+f'>{e(x)}</a></li>' for h,x,cur in links)+'</ul></div></footer></body></html>\n')
+            +''.join(f'<li><a class="link link-hover min-h-11 min-w-11 inline-flex items-center justify-center whitespace-nowrap" href="{h}"'+(' aria-current="page"' if cur else '')+f'>{e(x)}</a></li>' for h,x,cur in links)+'</ul></div></footer></body></html>\n')
 
 # ---------- tool section ----------
 def tabs(lang,mode):
@@ -138,11 +149,11 @@ def app(lang,mode,hub=False):
     if mode=='split':
         splitopts=(f'<div class="filerow"><div class="min-w-0"><p class="fname" id="sfname"></p><p class="fsub text-sm text-base-content/80" id="sfsub"></p></div><button type="button" class="btn btn-outline min-h-11" id="replace">{e(t["replace_file"])}</button></div>'
           f'<fieldset class="sopts card card-border bg-base-100 mt-4 p-2 sm:p-4"><legend class="sr-only">{e(t["aria_split"])}</legend>'
-          f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="ranges" checked><span class="font-semibold">{e(t["split_ranges"])}</span></label>'
+          f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="ranges" checked aria-describedby="sd-ranges"><span class="font-semibold">{e(t["split_ranges"])}</span></label><p class="sdesc text-sm text-base-content/80 ms-9" id="sd-ranges">{e(t["split_ranges_desc"])}</p>'
           f'<div class="optb" data-for="ranges"><label class="block text-sm font-medium mt-2" for="ranges">{e(t["range_label"])}</label><input class="input w-full max-w-xs min-h-11 mt-1" id="ranges" name="ranges" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="{e(t["ph_range"])}" aria-describedby="rhint rerr"><p class="text-sm text-base-content/80 mt-1" id="rhint">{e(t["range_hint"])}</p><p class="rerr text-sm text-error mt-1" id="rerr" hidden></p></div></div>'
-          f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="every"><span class="font-semibold">{e(t["split_every"])}</span></label>'
+          f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="every" aria-describedby="sd-every"><span class="font-semibold">{e(t["split_every"])}</span></label><p class="sdesc text-sm text-base-content/80 ms-9" id="sd-every">{e(t["split_every_desc"])}</p>'
           f'<div class="optb" data-for="every" hidden><label class="block text-sm font-medium mt-2" for="every">{e(t["every_label"])}</label><input class="input w-28 min-h-11 mt-1" id="every" name="every" type="number" inputmode="numeric" min="1" step="1" value="1" autocomplete="off"></div></div>'
-          f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="extract"><span class="font-semibold">{e(t["split_extract"])}</span></label>'
+          f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="extract" aria-describedby="sd-extract"><span class="font-semibold">{e(t["split_extract"])}</span></label><p class="sdesc text-sm text-base-content/80 ms-9" id="sd-extract">{e(t["split_extract_desc"])}</p>'
           f'<div class="optb" data-for="extract" hidden><p class="text-sm text-base-content/80 mt-2">{e(t["extract_hint"])}</p><p class="text-sm font-medium mt-1" id="xcount"></p></div></div>'
           f'<p class="sres" id="sres" aria-live="polite"></p></fieldset>')
     toolbar=('' if mode=='split' else
@@ -163,10 +174,27 @@ def app(lang,mode,hub=False):
       f'<div class="modal-action"><button type="button" class="btn btn-outline min-h-11" id="cfno">{e(t["cancel"])}</button><button type="button" class="btn btn-error min-h-11" id="cfok">{e(t["clear_confirm_ok"])}</button></div></div></dialog>'
       '</section>\n'+(dz if False else ''))
 
+HEIC_HREF='/image-converter/{lp}heic-to-jpg.html'  # verified in swtormy-agents/image-converter main: heic-to-jpg.html, ru/, zh/
+def heic_text(lang): return T[lang]['pair_h1'].format(A='HEIC',B='JPG')
+def heic_attrs(lang):
+    """jpg-to-pdf only: the UNSUPPORTED_IMAGE card for a .heic/.heif file links to the converter's HEIC -> JPG page in the
+    same language (SEO §6, UX review: only there and in the formats FAQ answer). The anchor is the converter's approved
+    H1 for that page (converter i18n pair_h1); a dedicated err_heic_fix key from Nathan would replace it."""
+    return f' data-heic-href="{HEIC_HREF.format(lp=lp(lang))}" data-heic-text="{e(plain(heic_text(lang)))}"'
+
+# FAQ answers may carry links as [text](/path) or [text](https://noclaudkit.com/...): rendered as <a> in the visible FAQ,
+# plain link text in FAQPage JSON-LD, so the two still match word for word.
+FAQ_LINK=re.compile(r'\[([^\]]+)\]\(((?:https://noclaudkit\.com)?/[^)\s]*)\)')
+def faq_plain(a): return FAQ_LINK.sub(lambda m:m.group(1),a)
+def faq_answer_html(a):
+    out,pos='',0
+    for m in FAQ_LINK.finditer(a):
+        out+=e(a[pos:m.start()])+f'<a class="link link-primary" href="{e(m.group(2))}">{e(m.group(1))}</a>'; pos=m.end()
+    return out+e(a[pos:])
 def faq_html(lang,items):
     t=T[lang]
     return (f'<section class="faq mt-12" aria-labelledby="faq-h"><h2 id="faq-h" class="text-2xl font-semibold">{e(t["faq_h"])}</h2><div class="mt-4 space-y-2">'
-            +''.join(f'<details class="collapse collapse-arrow bg-base-200"><summary class="collapse-title font-semibold min-h-11">{e(x["q"])}</summary><div class="collapse-content"><p>{e(x["a"])}</p></div></details>' for x in items)+'</div></section>\n')
+            +''.join(f'<details class="collapse collapse-arrow bg-base-200"><summary class="collapse-title font-semibold min-h-11">{e(x["q"])}</summary><div class="collapse-content"><p>{faq_answer_html(x["a"])}</p></div></details>' for x in items)+'</div></section>\n')
 
 def i18n_block(lang):
     """UI strings for assets/app.js as a JSON data block (type=application/json is never executed, so CSP script-src
@@ -182,15 +210,15 @@ def tool_page(lang,page,key,mode):
     faqs=FAQ[lang][key]
     ld=[{'@context':'https://schema.org','@type':'WebApplication','name':plain(s['title']),'description':plain(s['meta']),'url':url(lang,page),'inLanguage':HREFLANG[lang],
          'applicationCategory':'UtilitiesApplication','operatingSystem':'Any','browserRequirements':'Requires JavaScript','isAccessibleForFree':True,'offers':{'@type':'Offer','price':'0','priceCurrency':'USD'}}]
-    ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':x['a']}} for x in faqs]})
+    ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':faq_plain(x['a'])}} for x in faqs]})
     P='' if lang=='en' else '../'
-    attrs=f' data-lang="{HREFLANG[lang]}" data-worker="{P}assets/worker.js" data-pdfjs="{P}assets/vendor/pdf.min.js" data-pdfjs-worker="{P}assets/vendor/pdf.worker.min.js"'
+    attrs=(heic_attrs(lang) if mode=='images' else '')+f' data-lang="{HREFLANG[lang]}" data-worker="{P}assets/worker.js" data-pdfjs="{P}assets/vendor/pdf.min.js" data-pdfjs-worker="{P}assets/vendor/pdf.worker.min.js"'
     out=head(T,lang,page,s['title'],s['meta'],jsonld(ld),attrs)
     if hub:
-        out+=(f'<section class="hero"><div class="hero-l"><h1 id="h1" class="h1">{e(h1)}</h1><p class="lede">{e(t["lede"])}</p>{dropzone(lang,"merge")}</div>{HERO_ART}</section>\n'
+        out+=(f'<section class="hero"><div class="hero-l"><h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(t["lede"])}</p>{dropzone(lang,"merge")}</div>{HERO_ART}</section>\n'
               +app(lang,mode,hub=True)+modecards(lang))
     else:
-        out+=(f'<h1 id="h1" class="h1">{e(h1)}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode))
+        out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode))
     out+=faq_html(lang,faqs)
     if not hub: out+=modecards(lang)
     out+=i18n_block(lang)+f'<script type="module" src="{P}assets/app.js"></script>\n'
@@ -216,7 +244,7 @@ def privacy_page(lang):
     assert fixed==1, f'privacy {lang}: re-encoding sentence not found (Counsel text changed?)'
     assert not re.search(r're-encoded|перекодируются|重新编码|offline|без интернета|离线',' '.join(paras)), f'privacy {lang}: unverified claim left'
     h1=re.sub(r'\*','',P['privacy'][0]); dh=re.sub(r'\*','',P['disclaimer'][0])
-    body=(f'<h1 id="h1">{e(h1)}</h1>\n'+'\n'.join(paras)+f'\n<h2>{e(dh)}</h2>\n'+'\n'.join(f'<p>{vis(lang,md_inline(p))}</p>' for p in P['disclaimer'][1:])+'\n')
+    body=(f'<h1 id="h1">{e(vis(lang,h1))}</h1>\n'+'\n'.join(paras)+f'\n<h2>{e(dh)}</h2>\n'+'\n'.join(f'<p>{vis(lang,md_inline(p))}</p>' for p in P['disclaimer'][1:])+'\n')
     body=body.replace('GitHub Privacy Statement','<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>')
     body=body.replace('Заявление о конфиденциальности GitHub','<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">Заявление о конфиденциальности GitHub</a>')
     body=body.replace('《GitHub 隐私声明》','<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">《GitHub 隐私声明》</a>')
@@ -227,7 +255,7 @@ def licenses_page(lang):
     t=T[lang]
     rows=''.join(f'<tr><td translate="no">{e(n)}</td><td class="tabular-nums">{e(v)}</td><td translate="no">{e(l)}</td></tr>' for n,v,l,_ in LIBS['libs'])
     texts=''.join(f'<h3 translate="no">{e(h)}</h3><pre class="lic" lang="en" translate="no">{e(txt)}</pre>\n' for h,txt in LIBS['texts'])
-    body=(f'<h1 id="h1">{e(t["licenses_title"].split(" – ")[0].split(" — ")[0])}</h1>\n<p>{e(t["licenses_body"])}</p>\n'
+    body=(f'<h1 id="h1">{e(vis(lang,re.split(r' [–—] |｜| · ',t["licenses_title"])[0]))}</h1>\n<p>{e(t["licenses_body"])}</p>\n'
           f'<h2>{e(t["lic_h_libs"])}</h2><div class="overflow-x-auto"><table class="table"><thead><tr><th>{e(t["lic_col_pkg"])}</th><th>{e(t["lic_col_ver"])}</th><th>{e(t["lic_col_lic"])}</th></tr></thead><tbody>{rows}</tbody></table></div>\n'
           f'<h2>{e(t["lic_h_texts"])}</h2>\n{texts}')
     return head(T,lang,'licenses.html',t['licenses_title'],t['licenses_desc'],doc=True)+body+foot(lang,'licenses.html')
@@ -274,11 +302,16 @@ BANNED=re.compile(r'adobe|acrobat|ilovepdf|smallpdf|sejda|pdf24|unlock|donat|boo
 def check_page(lang,p,s):
     vis_txt=re.sub(r'<pre class="lic".*?</pre>','',s,flags=re.S) if p=='licenses.html' else s
     vis_txt=vis_txt.replace('are not unlocked','')  # Counsel's privacy text denies unlocking; that is allowed
+    if p=='jpg-to-pdf.html':  # the HEIC -> JPG link target for the error card is the one allowed 'heic' (a link, not a HEIC-input claim)
+        a=heic_attrs(lang); assert vis_txt.count(a)==1, f'HEIC card link data missing in {lang}/{p}'; vis_txt=vis_txt.replace(a,'')
+    # FAQ links to the converter's HEIC pages (formats answer, text from Lucas/Nathan): the link itself is allowed
+    vis_txt=re.sub(r'<a class="link link-primary" href="/image-converter/(?:ru/|zh/)?heic-to-[a-z]+\.html">[^<]*</a>','',vis_txt)
+    assert '\u2011' not in ''.join(re.findall(r'<head>.*?</head>|<[^>]*>|<script type="application/ld\+json">.*?</script>',s,re.S)), f'U+2011 in markup/meta in {lang}/{p}'
     m=BANNED.search(vis_txt); assert not m, f'banned word {m.group(0)!r} in {lang}/{p}'
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):
         d=json.loads(j); assert 'aggregateRating' not in j
         if d['@type']=='FAQPage':
-            vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',s)]; va=[html.unescape(x) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',s)]
+            vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',s)]; va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',s)]
             assert vq==[q['name'] for q in d['mainEntity']] and va==[q['acceptedAnswer']['text'] for q in d['mainEntity']], f'FAQ JSON-LD != visible FAQ in {lang}/{p}'
 def selftest():
     bad='<script>alert(1)</script>'
@@ -310,12 +343,13 @@ for lang in LANGS:
 
 def lastmod(l,p):
     """Last commit date of the page's content sources (not of gen.py); falls back to the newest commit date."""
-    src=[f'tools/i18n/{l}.json','tools/i18n/seo.json','tools/i18n/faq.json','tools/i18n/site.json']
+    src=[f'tools/i18n/{l}.json','tools/i18n/seo.json','tools/i18n/faq.json']
     d=subprocess.run(['git','log','-1','--format=%cs','--',*src],capture_output=True,text=True).stdout.strip()
     if not d: d=subprocess.run(['git','log','-1','--format=%cs'],capture_output=True,text=True).stdout.strip()
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), 'no git date'
     return d
-SM=[(l,p) for l,p in pages if p not in DOC]
+SM=[(l,p) for l,p in pages]  # all 21 pages incl. privacy + licences (converter convention, SEO review 38054b6 #4)
+assert len(SM)==21, len(SM)
 sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
  +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'+''.join(f'<xhtml:link rel="alternate" hreflang="{HREFLANG[x]}" href="{url(x,p)}"/>' for x in LANGS)+f'<xhtml:link rel="alternate" hreflang="x-default" href="{url("en",p)}"/></url>\n' for l,p in SM)+'</urlset>\n')
 if not os.path.exists('sitemap.xml') or open('sitemap.xml').read()!=sm: open('sitemap.xml','w').write(sm)

@@ -189,6 +189,78 @@ async def run(bname, p, tmp):
     ok(pre + 'split extract: pages.pdf with pages 2, 5', name == 'pages.pdf' and [p['w'] for p in v['pages']] == [102, 105], (name, v.get('pages')))
     await pg.close()
 
+    # ---- result_line plural (organize): 2 pages vs 1 page, en/ru/zh; done_* never says "1 pages" ----
+    for lang, two, one in (('', ' · 2 pages · ', ' · 1 page · '), ('ru/', ' · 2 стр. · ', ' · 1 стр. · '), ('zh/', ' · 2 页 · ', ' · 1 页 · ')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'organize-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'invoice.pdf']); await loaded(pg)
+        await pg.click('#go'); await pg.wait_for_selector('#done:not([hidden])', timeout=30000)
+        d2 = (await pg.inner_text('#dname')).replace('\xa0', ' ')
+        await pg.click('#again'); await pg.locator('#pages > .pc').nth(1).locator('[data-act=del]').click()
+        await pg.click('#go'); await pg.wait_for_selector('#done:not([hidden])', timeout=30000)
+        d1 = (await pg.inner_text('#dname')).replace('\xa0', ' ')
+        ok(pre + f'result_line plural {lang or "en/"}: 2 vs 1 page', two in d2 and one in d1 and '1 pages' not in d1, (d2, d1))
+        await pg.close()
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'split-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
+    await pg.fill('#ranges', '5'); await pg.click('#go'); await pg.wait_for_selector('#done:not([hidden])', timeout=30000)
+    dn = await pg.inner_text('#dname')
+    ok(pre + 'split single page (en): result line "1 page", no "1 pages"', ' · 1 page · ' in dn and '1 pages' not in dn, dn)
+    await pg.close()
+
+    # ---- split option descriptions (en/ru/zh): visible under each radio, linked by aria-describedby ----
+    src = {l: json.load(open(f'{HERE}/../i18n/{l}.json', encoding='utf-8')) for l in ('en', 'ru', 'zh')}
+    for lang, l in (('', 'en'), ('ru/', 'ru'), ('zh/', 'zh')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'split-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
+        got = await pg.evaluate("""() => ['ranges','every','extract'].map(m => { const r = document.querySelector(`input[name=smode][value=${m}]`); const d = document.getElementById(r.getAttribute('aria-describedby'));
+            return d ? [d.textContent, d.getBoundingClientRect().height > 0] : null; })""")
+        want = [[src[l][f'split_{m}_desc'], True] for m in ('ranges', 'every', 'extract')]
+        ok(pre + f'split option descriptions {l}: present, visible, aria-describedby', got == want, got)
+        await pg.close()
+
+    # ---- split limits: 1000 pages per part, 5000 total, 50 parts (6000-page file); 2500 pages over 3 parts works ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'split-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'long6000.pdf']); await loaded(pg)
+    async def rerr(): return (await pg.get_attribute('#rerr', 'data-code'), (await pg.inner_text('#rerr')).replace('\xa0', ' '), await pg.is_disabled('#go'))
+    await pg.fill('#ranges', '1-1001'); c, tx, dis = await rerr()
+    ok(pre + 'split limit: part > 1000 pages -> err_split_part_pages', c == 'SPLIT_PART_PAGES' and 'A file has more than 1,000 pages' in tx and dis, (c, tx))
+    await pg.check('input[name=smode][value=every]'); await pg.fill('#every', '1000'); c, tx, dis = await rerr()
+    ok(pre + 'split limit: total > 5000 pages -> err_split_total_pages', c == 'SPLIT_TOTAL_PAGES' and 'All files together exceed 5,000 pages' in tx and dis, (c, tx))
+    await pg.fill('#every', '100'); c, tx, dis = await rerr()
+    ok(pre + 'split limit: > 50 parts -> err_split_parts', c == 'SPLIT_PARTS' and 'More than 50 files' in tx and dis, (c, tx))
+    await pg.check('input[name=smode][value=ranges]'); await pg.fill('#ranges', '1-1000, 1001-2000, 2001-2500'); c, tx, dis = await rerr()
+    ok(pre + 'split limit: 2500 pages in 3 parts allowed', c is None and not dis, (c, tx))
+    await pg.click('#go'); await pg.wait_for_selector('#done:not([hidden])', timeout=60000)
+    ok(pre + 'split 2500 pages / 3 parts: ZIP of 3 files (batched core calls)', (await pg.inner_text('#dl')).strip() == 'Download ZIP (3 files)', await pg.inner_text('#dl'))
+    await pg.close()
+    # ru texts for the three limits (no placeholders)
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'ru/split-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'long6000.pdf']); await loaded(pg)
+    await pg.fill('#ranges', '1-1001'); c, tx, _ = await rerr()
+    ok(pre + 'split limit ru: part text', 'В одном файле больше 1000 страниц' in tx, tx)
+    await pg.close()
+
+    # ---- split: core TOO_MANY_PAGES with details -> the matching split card (core fix in progress; shimmed worker) ----
+    real_w = open(os.path.join(HERE, '..', '..', 'assets', 'worker.js')).read()
+    for reason, code in (('part', 'SPLIT_PART_PAGES'), ('total', 'SPLIT_TOTAL_PAGES'), ('parts', 'SPLIT_PARTS')):
+        shim2 = real_w + """
+;(() => { const real = self.onmessage; self.onmessage = (ev) => { const m = ev.data;
+  if (m.op === 'split') return self.postMessage({ id: m.id, error: { code: 'TOO_MANY_PAGES', details: { reason: '%s' } } });
+  return real(ev); }; })();""" % reason
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.route('**/pdf/assets/worker.js', lambda r, b=shim2: r.fulfill(status=200, content_type='text/javascript', body=b))
+        await pg.goto(B + 'split-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
+        await pg.fill('#ranges', '1-3, 4-6'); await pg.click('#go'); await pg.wait_for_selector('#errs .ecard', timeout=15000)
+        got = await pg.eval_on_selector('#errs .ecard', 'e=>e.dataset.code')
+        ok(pre + f'split core error details.reason={reason} -> {code}', got == code, got)
+        await pg.close()
+
     # ---- encrypted on split page ----
     pg = await newpage(ctx, 375, 800); w = Watch(pg, bname); watches.append(w)
     await pg.goto(B + 'ru/split-pdf.html'); await ready(pg)
