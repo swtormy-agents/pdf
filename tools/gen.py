@@ -126,10 +126,10 @@ def tabs(lang,mode):
     t=T[lang]
     return (f'<nav class="modetabs tabs tabs-box mt-6" aria-label="{e(t["aria_modes"])}">'
             +''.join(f'<a class="tab min-h-11'+(' tab-active' if m==mode else '')+f'" href="{p}"'+(' aria-current="page"' if m==mode else '')+f'>{e(t[MODE_KEY[m]])}</a>' for m,p in MODE_PAGE.items())+'</nav>\n')
-def modecards(lang):
+def modecards(lang,skip=None):
     t=T[lang]
     return ('<ul class="modecards" role="list">'+''.join(
-        f'<li><a class="mcard" href="{p}"><span class="pv">{ILLS[m]}</span><span class="tx"><span class="mt">{e(t[MODE_KEY[m]])}</span><span class="md">{e(t[MODE_KEY[m]+"_desc"])}</span></span></a></li>' for m,p in MODE_PAGE.items())+'</ul>\n')
+        f'<li><a class="mcard" href="{p}"><span class="pv">{ILLS[m]}</span><span class="tx"><span class="mt">{e(t[MODE_KEY[m]])}</span><span class="md">{e(t[MODE_KEY[m]+"_desc"])}</span></span></a></li>' for m,p in MODE_PAGE.items() if m!=skip)+'</ul>\n')
 def dropzone(lang,mode):
     t=T[lang]
     if mode=='images': title,hint,btn,acc,mult=t['drop_img'],t['drop_hint_img'],t['choose_files'],'image/jpeg,image/png',True
@@ -229,7 +229,9 @@ def tool_page(lang,page,key,mode):
     else:
         out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode))
     out+=faq_html(lang,faqs,heic=mode=='images')
-    if not hub: out+=modecards(lang)
+    # task pages: H2 'Other PDF tools' (Nathan's other_tools) after the FAQ, same heading style, the 3 other tools only
+    if not hub: out+=(f'<section class="others mt-12" aria-labelledby="others-h"><h2 id="others-h" class="text-2xl font-semibold">{e(t["other_tools"])}</h2><div class="mt-4">'
+                      +modecards(lang,skip=mode)+'</div></section>\n')
     out+=i18n_block(lang)+f'<script type="module" src="{P}assets/app.js"></script>\n'
     return out+foot(lang,page)
 
@@ -307,20 +309,13 @@ def load_libs():
 def plain_meta(s):
     for m in re.finditer(r'<[^>]*>|<title>.*?</title>|<script type="application/ld\+json">.*?</script>',s,re.S): assert NB not in m.group(0), 'U+00A0 in markup/meta: '+m.group(0)[:80]
     return s
-BANNED=re.compile(r'adobe|acrobat|ilovepdf|smallpdf|sejda|pdf24|unlock|donat|boosty|поддержать проект|iphone|heic|offline|офлайн|离线|онлайн',re.I)
+BANNED=re.compile(r'adobe|acrobat|ilovepdf|smallpdf|sejda|pdf24|unlock|donat|boosty|поддержать проект|iphone|offline|офлайн|离线|онлайн',re.I)
 def check_page(lang,p,s):
     vis_txt=re.sub(r'<pre class="lic".*?</pre>','',s,flags=re.S) if p=='licenses.html' else s
     vis_txt=vis_txt.replace('are not unlocked','')  # Counsel's privacy text denies unlocking; that is allowed
-    if p=='jpg-to-pdf.html':  # the HEIC -> JPG link target for the error card is the one allowed 'heic' (a link, not a HEIC-input claim)
-        a=heic_attrs(lang); assert vis_txt.count(a)==1, f'HEIC card link data missing in {lang}/{p}'; vis_txt=vis_txt.replace(a,'')
-        # the approved formats FAQ answer that links the converter (Lucas/Nathan): exactly that answer, visible and in
-        # FAQPage JSON-LD, is allowed; any other HEIC wording on the page still fails
-        for x in FAQ[lang]['jpg']:
-            if T[lang]['err_heic_link_text'].replace(NB,' ') in x['a']:
-                vis=f'<p>{faq_answer_html(heic_faq_links(lang,x["a"]))}</p>'; assert f'href="{heic_href(lang)}"' in vis and vis in vis_txt, f'HEIC FAQ link missing in {lang}/{p}'
-                vis_txt=vis_txt.replace(vis,'')
-                ld=json.dumps(faq_plain(x['a']),ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
-                assert ld in vis_txt, f'HEIC FAQ JSON-LD text missing in {lang}/{p}'; vis_txt=vis_txt.replace(ld,'')
+    if p=='jpg-to-pdf.html':  # the UNSUPPORTED_IMAGE card's HEIC -> JPG link data must be present exactly once
+        assert s.count(heic_attrs(lang))==1, f'HEIC card link data missing in {lang}/{p}'
+        assert f'<a class="link link-primary" href="{heic_href(lang)}">' in s, f'HEIC FAQ link missing in {lang}/{p}'
     assert '\u2011' not in ''.join(re.findall(r'<head>.*?</head>|<[^>]*>|<script type="application/ld\+json">.*?</script>',s,re.S)), f'U+2011 in markup/meta in {lang}/{p}'
     m=BANNED.search(vis_txt); assert not m, f'banned word {m.group(0)!r} in {lang}/{p}'
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):

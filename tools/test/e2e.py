@@ -245,7 +245,7 @@ async def run(bname, p, tmp):
     ok(pre + 'split limit ru: part text', 'В одном файле больше 1000 страниц' in tx, tx)
     await pg.close()
 
-    # ---- split: core errors carry details.limit ('part' | 'total' | 'parts', core aea0eb0) -> the matching split card ----
+    # ---- split: core errors carry details.limit ('part' | 'total' | 'parts', core ea16ac5) -> the matching split card ----
     real_w = open(os.path.join(HERE, '..', '..', 'assets', 'worker.js')).read()
     for limit, ccode, code in (('part', 'TOO_MANY_PAGES', 'SPLIT_PART_PAGES'), ('total', 'TOO_MANY_PAGES', 'SPLIT_TOTAL_PAGES'), ('parts', 'TOO_MANY_FILES', 'SPLIT_PARTS')):
         shim2 = real_w + """
@@ -290,7 +290,7 @@ async def run(bname, p, tmp):
     await pg.check('input[name=smode][value=every]'); await pg.fill('#every', '30'); l3 = await pg.inner_text('#rlive')
     par1 = await pg.evaluate("document.getElementById('rlive').parentElement.tagName + (document.getElementById('rlive').getAttribute('aria-live'))")
     ok(pre + 'split PAGE_RANGE: error text in #rlive (polite), kept after the error clears, region not moved',
-       src['en']['err_range'] in l1 and '24' in l1 and l2 == l1 and src['en']['err_range'] in l3 and par0 == par1 == 'FIELDSETpolite', (par0, par1, l1, l2, l3))
+       src['en']['err_range'] in l1 and '24' in l1 and l2 == l1 and l3 == src['en']['err_every_n'].replace('{pageCount}', '24') and par0 == par1 == 'FIELDSETpolite', (par0, par1, l1, l2, l3))
     await pg.close()
 
     # ---- organize at 375 (.pick is display:contents) and 1280: delete -> neighbour's delete button; Undo -> restored card, announced ----
@@ -339,6 +339,49 @@ async def run(bname, p, tmp):
         href = src[l]['err_heic_url'].replace('https://noclaudkit.com', 'http://127.0.0.1:8931')
         ok(pre + f'HEIC card {l}: link to the HEIC -> JPG converter, other unsupported files without it',
            info == [['UNSUPPORTED_IMAGE', href, src[l]['err_heic_link_text'].replace('\xa0', ' ')], ['UNSUPPORTED_IMAGE', None, None]], info)
+        await pg.close()
+
+    # ---- Nathan 20.10 strings: FAQ HEIC link, broken image hint, every-N error, Other PDF tools H2, plurals, huge spec ----
+    for lang, l in (('', 'en'), ('ru/', 'ru'), ('zh/', 'zh')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'jpg-to-pdf.html'); await ready(pg)
+        a = await pg.evaluate("""() => [...document.querySelectorAll('.faq .collapse-content a')].map(x => [x.getAttribute('href'), x.textContent])""")
+        ld = await pg.evaluate("""() => [...document.querySelectorAll('script[type="application/ld+json"]')].map(x => x.textContent).join('')""")
+        want = [[src[l]['err_heic_url'].replace('https://noclaudkit.com', ''), src[l]['err_heic_link_text'].replace('\xa0', ' ')]]
+        ok(pre + f'jpg FAQ {l}: converter name linked to heic-to-jpg, FAQPage text without the URL', a == want and 'heic-to-jpg' not in ld and want[0][1] in ld, (a, want))
+        h2 = await pg.evaluate("""() => { const hs = [...document.querySelectorAll('main h2, h2')].map(h => h.id); const s = document.querySelector('section.others');
+            return [hs.indexOf('faq-h') < hs.indexOf('others-h'), s && s.querySelector('h2').textContent, s && s.querySelector('h2').className === document.getElementById('faq-h').className,
+                    s ? [...s.querySelectorAll('.mcard')].map(x => x.getAttribute('href')) : null]; }""")
+        ok(pre + f'jpg-to-pdf {l}: H2 other_tools after the FAQ, FAQ heading style, 3 other tools', h2[0] and h2[1] == src[l]['other_tools'] and h2[2] and len(h2[3]) == 3 and not any('jpg-to-pdf' in x for x in h2[3]), h2)
+        await pg.set_input_files('#files', [FX + 'broken.jpg']); await pg.wait_for_selector('#errs .ecard'); await pg.wait_for_selector('#proc', state='hidden')
+        tx = (await pg.inner_text('#errs .ecard .ef')).replace('\xa0', ' ')
+        ok(pre + f'IMAGE_INVALID {l}: err_image_broken_fix', await pg.eval_on_selector('#errs .ecard', 'e=>e.dataset.code') == 'IMAGE_INVALID' and tx == src[l]['err_image_broken_fix'].replace('\xa0', ' '), tx)
+        await pg.close()
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang); await pg.wait_for_load_state('load')
+        ok(pre + f'hub {l}: no Other PDF tools H2', await pg.locator('section.others').count() == 0 and await pg.locator('.modecards .mcard').count() == 4)
+        await pg.close()
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'split-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
+        await pg.check('input[name=smode][value=every]')
+        want = src[l]['err_every_n'].replace('{pageCount}', '24').replace('\xa0', ' ')
+        got = []
+        for v in ('0', '2.5'):
+            await pg.fill('#every', v); got.append((await pg.inner_text('#rerr')).replace('\xa0', ' '))
+        await pg.fill('#every', '1'); r1 = (await pg.inner_text('#sres')).replace('\xa0', ' ')
+        ev = src[l]['every_result']; ev = ev if isinstance(ev, dict) else {'other': ev}; w1 = ev.get('one', ev.get('other')).replace('{n}', '24').replace('{k}', '1').replace('\xa0', ' ')
+        ok(pre + f'every N {l}: 0 and 2.5 -> err_every_n, every 1 -> every_result plural for k=1', got == [want, want] and r1 == w1, (got, want, r1, w1))
+        await pg.check('input[name=smode][value=ranges]'); await pg.fill('#ranges', ','.join(['1-24'] * 300))
+        c, tx, dis = await rerr()
+        ok(pre + f'split {l}: duplicated huge spec (core TOO_MANY_PAGES) -> err_split_total_pages', c == 'SPLIT_TOTAL_PAGES' and dis and src[l]['err_split_total_pages'].replace('\xa0', ' ') in tx, (c, tx))
+        await pg.close()
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'merge-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + f'm{k:02d}.pdf' for k in range(1, 52)]); await loaded(pg)
+        tx = (await pg.inner_text('#errs .ecard .ef')).replace('\xa0', ' ')
+        fx = src[l]['err_too_many_files_fix']; fx = fx if isinstance(fx, dict) else {'other': fx}; w1 = fx.get('one', fx.get('other')).replace('{n}', '1').replace('\xa0', ' ')
+        ok(pre + f'TOO_MANY_FILES {l}: fix text plural for 1 file not added', tx == w1, (tx, w1))
         await pg.close()
 
     # ---- sitemap: 21 URLs, each with en/ru/zh/x-default alternates ----

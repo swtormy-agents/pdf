@@ -15,5 +15,9 @@ w('photo-gps.jpg', exifJpeg()); w('meta.png', metadataPng()); w('plain.png', pla
 w('long60.pdf', await plainPdf(60));
 // a HEIC file (ISO-BMFF 'ftypheic' header only): not JPG/PNG -> UNSUPPORTED_IMAGE with the HEIC -> JPG link
 w('IMG_0001.heic', new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63]));
+// a JPEG signature with a corrupt marker: sniffed as JPEG, header parse fails -> IMAGE_INVALID (err_image_broken_fix)
+w('broken.jpg', new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x12, 0x34]));
+// 51 small PDFs for the TOO_MANY_FILES plural (1 file not added)
+for (let k = 1; k <= 51; k++) w(`m${String(k).padStart(2, '0')}.pdf`, await sized(500, 1));
 w('notes.txt', new TextEncoder().encode('hello'));
 console.log('fixtures in', d);

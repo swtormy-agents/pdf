@@ -201,7 +201,7 @@ function init() {
       case 'PDF_INVALID': return card(t('err_invalid', { file: name }), t(f && isImageName(f) ? 'err_invalid_fix_image' : 'err_invalid_fix'), { full, code });
       // .heic/.heif on jpg-to-pdf: the fix links the converter's HEIC -> JPG page (gen.py data-heic-*, Nathan's err_heic_* keys)
       case 'UNSUPPORTED_IMAGE': return card(t('err_image_invalid', { file: name }), f && /\.hei[cf]$/i.test(f.name) && body.dataset.heicHref ? heicFix() : t('err_image_invalid_fix'), { full, code });
-      case 'IMAGE_INVALID': return card(t('err_image_invalid', { file: name }), t('err_image_invalid_fix'), { full, code });
+      case 'IMAGE_INVALID': return card(t('err_image_invalid', { file: name }), t('err_image_broken_fix'), { full, code });
       // core TOO_LARGE with details.reason 'decompressed': the file unpacks past the core's cap (Nathan's keys)
       case 'TOO_LARGE': return extra.reason === 'decompressed' && f ? card(t('err_too_large_unpacked', { file: name }), t('err_too_large_unpacked_fix'), { full, code })
         : extra.total ? card(t('err_total_large'), t('err_total_large_fix'), { code })
@@ -621,7 +621,7 @@ function init() {
     return null;
   }
   // core TOO_MANY_PAGES / TOO_MANY_FILES during split -> one of the three split cards, chosen by the core's
-  // details.limit ('part' | 'total' | 'parts'); core aea0eb0 always sets it.
+  // details.limit ('part' | 'total' | 'parts'); core ea16ac5 always sets it.
   const SPLIT_ERR = { part: 'SPLIT_PART_PAGES', total: 'SPLIT_TOTAL_PAGES', parts: 'SPLIT_PARTS' };
   function splitErrCode(e) {
     const d = (e && e.details) || {};
@@ -635,6 +635,7 @@ function init() {
     $('sfname').textContent = f.name;
     $('sfsub').textContent = t('n_pages', { n: num(f.pages) }, f.pages) + ' · ' + size(f.size);
     const m = splitMode();
+    let tooMany = false;
     document.querySelectorAll('.optb').forEach((b) => { b.hidden = b.dataset.for !== m; });
     rerr.hidden = true; rerr.textContent = ''; rangesIn.removeAttribute('aria-invalid'); everyIn.removeAttribute('aria-invalid');
     splitPlan = null; sres.textContent = '';
@@ -644,13 +645,15 @@ function init() {
       const v = rangesIn.value.replace(/\u2014/g, '-');
       if (v.trim()) {
         try {
-          // no page cap here: the 1000-page result limit is shown below with the real total
-          const g = parsePageRanges(v, f.pages, Infinity).map((x) => [x[0] + 1, x[x.length - 1] + 1]);
+          // cap = the split total (5000): core ea16ac5 stops a long or duplicated spec with TOO_MANY_PAGES as soon as the
+          // running total passes it -> err_split_total_pages; per-part / parts limits are checked below with the real plan
+          const g = parsePageRanges(v, f.pages, SPLIT.total).map((x) => [x[0] + 1, x[x.length - 1] + 1]);
           splitPlan = { groups: g, total: g.reduce((s, [a, b]) => s + b - a + 1, 0) };
           sres.textContent = g.length === 1 ? t('split_result_single', { list: listOf(g) }) : t('split_result_zip', { n: num(g.length), list: listOf(g) }, g.length);
         } catch (e) {
           rangesIn.setAttribute('aria-invalid', 'true'); rerr.hidden = false;
-          rerr.textContent = t('err_range') + ' · ' + t('err_range_fix', { n: num(f.pages) }, f.pages);
+          if (e && e.code === 'TOO_MANY_PAGES') { rerr.dataset.code = 'SPLIT_TOTAL_PAGES'; tooMany = true; rerr.textContent = t('err_split_total_pages') + ' · ' + t('err_split_total_pages_fix'); }
+          else rerr.textContent = t('err_range') + ' · ' + t('err_range_fix', { n: num(f.pages) }, f.pages);
         }
       }
     } else if (m === 'every') {
@@ -658,10 +661,10 @@ function init() {
       if (Number.isInteger(k) && k >= 1 && k <= f.pages) {
         const g = []; for (let a = 1; a <= f.pages; a += k) g.push([a, Math.min(f.pages, a + k - 1)]);
         splitPlan = { groups: g, total: f.pages };
-        sres.textContent = g.length === 1 ? t('split_result_single', { list: listOf(g) }) : t('every_result', { n: num(g.length), k: num(k) }, g.length);
-      } else if (everyIn.value !== '') {
+        sres.textContent = g.length === 1 ? t('split_result_single', { list: listOf(g) }) : t('every_result', { n: num(g.length), k: num(k) }, k);
+      } else if (everyIn.value !== '' || everyIn.validity.badInput) { // 0, a fraction, or text the number field rejects
         everyIn.setAttribute('aria-invalid', 'true'); rerr.hidden = false;
-        rerr.textContent = t('err_range') + ' · ' + t('err_range_fix', { n: num(f.pages) }, f.pages);
+        rerr.textContent = t('err_every_n', { pageCount: num(f.pages) });
       }
       if (rerr.parentElement !== everyIn.closest('.optb')) everyIn.closest('.optb').appendChild(rerr);
     } else {
@@ -674,7 +677,7 @@ function init() {
     if (over) {
       sres.textContent = ''; splitPlan = null; rerr.hidden = false; rerr.dataset.code = over;
       const k = 'err_' + over.toLowerCase(); rerr.textContent = t(k) + ' · ' + t(k + '_fix');
-    } else delete rerr.dataset.code;
+    } else if (!tooMany) delete rerr.dataset.code;
     rangesIn.setAttribute('aria-describedby', rerr.hidden ? 'rhint' : 'rhint rerr');
     // #rerr moves between blocks and is cleared on every render; #rlive never moves and is never cleared (Olivia 6)
     const emsg = rerr.hidden ? '' : rerr.textContent;

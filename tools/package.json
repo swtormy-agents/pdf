@@ -12,7 +12,7 @@
     "check:licenses": "node scripts/check-licenses.mjs"
   },
   "devDependencies": {
-    "@local-pdf-tools/core": "github:swtormy-agents/pdf-tools#aea0eb06bf6b64debc66d3f187def79f026bb449",
+    "@local-pdf-tools/core": "github:swtormy-agents/pdf-tools#ea16ac5b28fd33d4ade19dad0f960e988710f0cc",
     "@tailwindcss/cli": "4.3.3",
     "daisyui": "5.7.50",
     "esbuild": "0.28.2",
