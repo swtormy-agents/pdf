@@ -245,21 +245,108 @@ async def run(bname, p, tmp):
     ok(pre + 'split limit ru: part text', 'В одном файле больше 1000 страниц' in tx, tx)
     await pg.close()
 
-    # ---- split: core TOO_MANY_PAGES with details -> the matching split card (core fix in progress; shimmed worker) ----
+    # ---- split: core errors carry details.limit ('part' | 'total' | 'parts', core aea0eb0) -> the matching split card ----
     real_w = open(os.path.join(HERE, '..', '..', 'assets', 'worker.js')).read()
-    for reason, code in (('part', 'SPLIT_PART_PAGES'), ('total', 'SPLIT_TOTAL_PAGES'), ('parts', 'SPLIT_PARTS')):
+    for limit, ccode, code in (('part', 'TOO_MANY_PAGES', 'SPLIT_PART_PAGES'), ('total', 'TOO_MANY_PAGES', 'SPLIT_TOTAL_PAGES'), ('parts', 'TOO_MANY_FILES', 'SPLIT_PARTS')):
         shim2 = real_w + """
 ;(() => { const real = self.onmessage; self.onmessage = (ev) => { const m = ev.data;
-  if (m.op === 'split') return self.postMessage({ id: m.id, error: { code: 'TOO_MANY_PAGES', details: { reason: '%s' } } });
-  return real(ev); }; })();""" % reason
+  if (m.op === 'split') return self.postMessage({ id: m.id, error: { code: '%s', details: { limit: '%s' } } });
+  return real(ev); }; })();""" % (ccode, limit)
         pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
-        await pg.route('**/pdf/assets/worker.js', lambda r, b=shim2: r.fulfill(status=200, content_type='text/javascript', body=b))
+        await pg.route('**/pdf/assets/worker.js', (lambda b: lambda r: r.fulfill(status=200, content_type='text/javascript', body=b))(shim2))  # Playwright passes (route, request) to 2-arg handlers
         await pg.goto(B + 'split-pdf.html'); await ready(pg)
         await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
         await pg.fill('#ranges', '1-3, 4-6'); await pg.click('#go'); await pg.wait_for_selector('#errs .ecard', timeout=15000)
         got = await pg.eval_on_selector('#errs .ecard', 'e=>e.dataset.code')
-        ok(pre + f'split core error details.reason={reason} -> {code}', got == code, got)
+        ok(pre + f'split core error {ccode} details.limit={limit} -> {code}', got == code, got)
         await pg.close()
+
+    # ---- the three split errors as inline text (en/ru/zh), and 'every 1 page' on a 60-page file -> err_split_parts ----
+    for lang, l in (('', 'en'), ('ru/', 'ru'), ('zh/', 'zh')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'split-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'long6000.pdf']); await loaded(pg)
+        got = []
+        for v, code in (('1-1001', 'SPLIT_PART_PAGES'), ('1-1000, 1001-2000, 2001-3000, 3001-4000, 4001-5000, 5001-5001', 'SPLIT_TOTAL_PAGES')):
+            await pg.fill('#ranges', v); c, tx, dis = await rerr(); k = 'err_' + code.lower()
+            got.append(c == code and dis and src[l][k].replace('\xa0', ' ') in tx and src[l][k + '_fix'].replace('\xa0', ' ') in tx)
+        await pg.close()
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'split-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'long60.pdf']); await loaded(pg)
+        await pg.check('input[name=smode][value=every]'); await pg.fill('#every', '1'); c, tx, dis = await rerr()
+        got.append(c == 'SPLIT_PARTS' and dis and src[l]['err_split_parts'].replace('\xa0', ' ') in tx)
+        ok(pre + f'split errors {l}: part / total texts, every 1 page on 60 pages -> err_split_parts', all(got), (got, tx))
+        await pg.close()
+
+    # ---- PAGE_RANGE is written to a stable polite region (#rlive: never moved, never cleared) ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'split-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
+    par0 = await pg.evaluate("document.getElementById('rlive').parentElement.tagName + (document.getElementById('rlive').getAttribute('aria-live'))")
+    await pg.fill('#ranges', '30'); await pg.wait_for_timeout(50)
+    l1 = await pg.inner_text('#rlive')
+    await pg.fill('#ranges', '1-3'); l2 = await pg.inner_text('#rlive')
+    await pg.check('input[name=smode][value=every]'); await pg.fill('#every', '30'); l3 = await pg.inner_text('#rlive')
+    par1 = await pg.evaluate("document.getElementById('rlive').parentElement.tagName + (document.getElementById('rlive').getAttribute('aria-live'))")
+    ok(pre + 'split PAGE_RANGE: error text in #rlive (polite), kept after the error clears, region not moved',
+       src['en']['err_range'] in l1 and '24' in l1 and l2 == l1 and src['en']['err_range'] in l3 and par0 == par1 == 'FIELDSETpolite', (par0, par1, l1, l2, l3))
+    await pg.close()
+
+    # ---- organize at 375 (.pick is display:contents) and 1280: delete -> neighbour's delete button; Undo -> restored card, announced ----
+    for wd in (375, 1280):
+        pg = await newpage(ctx, wd, 800); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + 'organize-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'contract.pdf']); await loaded(pg)
+        await pg.locator('#pages > .pc').nth(1).locator('[data-act=del]').click()
+        f1 = await pg.evaluate("(() => { const a = document.activeElement; const li = a.closest('.pc'); return [a.dataset.act || a.className, li ? [...li.parentElement.children].indexOf(li) : -1]; })()")
+        await pg.click('#toast button'); await pg.wait_for_timeout(120)
+        f2 = await pg.evaluate("(() => { const a = document.activeElement; const li = a.closest('.pc'); return [a.tagName, li ? [...li.parentElement.children].indexOf(li) : -1, a.getClientRects().length > 0]; })()")
+        lv = await pg.inner_text('#live')
+        ok(pre + f'organize {wd}: delete focuses the neighbour delete button, Undo focuses the restored card + org_restored',
+           f1 == ['del', 1] and f2[0] == 'BUTTON' and f2[1] == 1 and f2[2] and lv == 'Page 2 restored', (f1, f2, lv))
+        await pg.close()
+
+    # ---- encrypted card on merge: closeable, the file stays out of the list ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'contract.pdf', FX + 'bank-statement.pdf']); await loaded(pg)
+    c0 = await pg.eval_on_selector_all('#errs .ecard', 'e => e.map(x => x.dataset.code)')
+    await pg.click('#errs .ecard[data-code=PDF_ENCRYPTED] button'); await pg.wait_for_timeout(100)
+    c1 = await pg.locator('#errs .ecard').count(); n = await pg.locator('#pages > .pc').count()
+    names = await pg.eval_on_selector_all('#pages > .pc .lb b', 'e => [...new Set(e.map(x => x.title))]')
+    ok(pre + 'encrypted card: closeable, file not in the list', c0 == ['PDF_ENCRYPTED'] and c1 == 0 and n == 3 and names == ['contract.pdf'], (c0, c1, n, names))
+    await pg.close()
+
+    # ---- primary label plural 1 vs 2 pages (merge, en/ru/zh) ----
+    for lang, l in (('', 'en'), ('ru/', 'ru'), ('zh/', 'zh')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'merge-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'invoice.pdf']); await loaded(pg)
+        g2 = (await pg.inner_text('#go')).strip()
+        await pg.locator('#pages > .pc').nth(1).locator('[data-act=del]').click(); g1 = (await pg.inner_text('#go')).strip()
+        pm = src[l]['primary_merge']; want2 = pm.get('few', pm.get('other')).replace('{n}', '2'); want1 = pm.get('one', pm.get('other')).replace('{n}', '1')
+        ok(pre + f'merge primary plural {l}: 2 vs 1 page', g2 == want2 and g1 == want1, (g2, g1, want2, want1))
+        await pg.close()
+
+    # ---- HEIC on jpg-to-pdf: UNSUPPORTED_IMAGE card links the converter's HEIC -> JPG page (en/ru/zh) ----
+    for lang, l in (('', 'en'), ('ru/', 'ru'), ('zh/', 'zh')):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + lang + 'jpg-to-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'IMG_0001.heic', FX + 'notes.txt'])
+        await pg.wait_for_selector('#errs .ecard:nth-child(2)'); await pg.wait_for_selector('#proc', state='hidden')
+        info = await pg.eval_on_selector_all('#errs .ecard', "e => e.map(x => [x.dataset.code, (x.querySelector('.ef a') || {}).href || null, (x.querySelector('.ef a') || {}).textContent || null])")
+        href = src[l]['err_heic_url'].replace('https://noclaudkit.com', 'http://127.0.0.1:8931')
+        ok(pre + f'HEIC card {l}: link to the HEIC -> JPG converter, other unsupported files without it',
+           info == [['UNSUPPORTED_IMAGE', href, src[l]['err_heic_link_text'].replace('\xa0', ' ')], ['UNSUPPORTED_IMAGE', None, None]], info)
+        await pg.close()
+
+    # ---- sitemap: 21 URLs, each with en/ru/zh/x-default alternates ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    r = await pg.goto(B + 'sitemap.xml'); sx = await r.text()
+    locs = re.findall(r'<loc>([^<]+)</loc>', sx)
+    ok(pre + 'sitemap: 21 unique URLs, 4 hreflang alternates each', len(locs) == 21 == len(set(locs)) and sx.count('hreflang=') == 21 * 4, (len(locs), sx.count('hreflang=')))
+    await pg.close()
 
     # ---- encrypted on split page ----
     pg = await newpage(ctx, 375, 800); w = Watch(pg, bname); watches.append(w)

@@ -155,7 +155,7 @@ def app(lang,mode,hub=False):
           f'<div class="optb" data-for="every" hidden><label class="block text-sm font-medium mt-2" for="every">{e(t["every_label"])}</label><input class="input w-28 min-h-11 mt-1" id="every" name="every" type="number" inputmode="numeric" min="1" step="1" value="1" autocomplete="off"></div></div>'
           f'<div class="opt"><label class="optl"><input type="radio" class="radio radio-primary" name="smode" value="extract" aria-describedby="sd-extract"><span class="font-semibold">{e(t["split_extract"])}</span></label><p class="sdesc text-sm text-base-content/80 ms-9" id="sd-extract">{e(t["split_extract_desc"])}</p>'
           f'<div class="optb" data-for="extract" hidden><p class="text-sm text-base-content/80 mt-2">{e(t["extract_hint"])}</p><p class="text-sm font-medium mt-1" id="xcount"></p></div></div>'
-          f'<p class="sres" id="sres" aria-live="polite"></p></fieldset>')
+          f'<p class="sres" id="sres" aria-live="polite"></p><p class="sr-only" id="rlive" aria-live="polite"></p></fieldset>')
     toolbar=('' if mode=='split' else
           f'<div class="tbar"><p class="counts" id="counts"></p><div class="tbtn">{size}<button type="button" class="btn btn-outline min-h-11" id="add">{e(t["add_files"])}</button><button type="button" class="btn btn-outline min-h-11" id="clear">{e(t["clear"])}</button></div></div>{metanote}')
     return (f'<section class="app" id="app" data-mode="{mode}" aria-labelledby="h1">'
@@ -175,12 +175,20 @@ def app(lang,mode,hub=False):
       '</section>\n'+(dz if False else ''))
 
 HEIC_HREF='/image-converter/{lp}heic-to-jpg.html'  # verified in swtormy-agents/image-converter main: heic-to-jpg.html, ru/, zh/
-def heic_text(lang): return T[lang]['pair_h1'].format(A='HEIC',B='JPG')
+def heic_href(lang):
+    """Nathan's err_heic_url must point at the same converter page; it is emitted as a same-site path."""
+    h=HEIC_HREF.format(lp=lp(lang)); assert UI[lang]['err_heic_url']=='https://noclaudkit.com'+h, f'err_heic_url mismatch in {lang}'
+    return h
 def heic_attrs(lang):
     """jpg-to-pdf only: the UNSUPPORTED_IMAGE card for a .heic/.heif file links to the converter's HEIC -> JPG page in the
-    same language (SEO §6, UX review: only there and in the formats FAQ answer). The anchor is the converter's approved
-    H1 for that page (converter i18n pair_h1); a dedicated err_heic_fix key from Nathan would replace it."""
-    return f' data-heic-href="{HEIC_HREF.format(lp=lp(lang))}" data-heic-text="{e(plain(heic_text(lang)))}"'
+    same language (SEO §6, UX review: only there and in the formats FAQ answer). Text from Nathan's keys err_heic_fix
+    ({link} placeholder) and err_heic_link_text; these keys are NOT in the page-wide i18n block (see i18n_block)."""
+    t=T[lang]
+    return f' data-heic-href="{heic_href(lang)}" data-heic-text="{e(plain(t["err_heic_link_text"]))}" data-heic-fix="{e(plain(t["err_heic_fix"]))}"'
+def heic_faq_links(lang,a):
+    """jpg formats FAQ answer: the converter name (= err_heic_link_text) becomes a link in the visible FAQ only."""
+    lt=T[lang]['err_heic_link_text'].replace(NB,' ')  # FAQ text uses plain spaces
+    return a.replace(lt,f'[{lt}]({heic_href(lang)})',1) if lt in a and '](' not in a else a
 
 # FAQ answers may carry links as [text](/path) or [text](https://noclaudkit.com/...): rendered as <a> in the visible FAQ,
 # plain link text in FAQPage JSON-LD, so the two still match word for word.
@@ -191,15 +199,16 @@ def faq_answer_html(a):
     for m in FAQ_LINK.finditer(a):
         out+=e(a[pos:m.start()])+f'<a class="link link-primary" href="{e(m.group(2))}">{e(m.group(1))}</a>'; pos=m.end()
     return out+e(a[pos:])
-def faq_html(lang,items):
+def faq_html(lang,items,heic=False):
     t=T[lang]
+    if heic: items=[{'q':x['q'],'a':heic_faq_links(lang,x['a'])} for x in items]
     return (f'<section class="faq mt-12" aria-labelledby="faq-h"><h2 id="faq-h" class="text-2xl font-semibold">{e(t["faq_h"])}</h2><div class="mt-4 space-y-2">'
             +''.join(f'<details class="collapse collapse-arrow bg-base-200"><summary class="collapse-title font-semibold min-h-11">{e(x["q"])}</summary><div class="collapse-content"><p>{faq_answer_html(x["a"])}</p></div></details>' for x in items)+'</div></section>\n')
 
 def i18n_block(lang):
     """UI strings for assets/app.js as a JSON data block (type=application/json is never executed, so CSP script-src
     'self' is unaffected). U+00A0 of visible ru strings is written as the escape \\u00a0, never as a raw character."""
-    keys=[k for k in UI[lang] if not k.startswith(('licenses_','f_','foot','mode_','drop','h1_','lede'))]
+    keys=[k for k in UI[lang] if not k.startswith(('licenses_','f_','foot','mode_','drop','h1_','lede','err_heic_'))]  # err_heic_*: jpg-to-pdf data attributes only
     d={k:UI[lang][k] for k in keys}
     j=json.dumps(d,ensure_ascii=False,sort_keys=True).replace(NB,'\\u00a0').replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     return f'<script type="application/json" id="i18n">{j}</script>\n'
@@ -219,7 +228,7 @@ def tool_page(lang,page,key,mode):
               +app(lang,mode,hub=True)+modecards(lang))
     else:
         out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode))
-    out+=faq_html(lang,faqs)
+    out+=faq_html(lang,faqs,heic=mode=='images')
     if not hub: out+=modecards(lang)
     out+=i18n_block(lang)+f'<script type="module" src="{P}assets/app.js"></script>\n'
     return out+foot(lang,page)
@@ -304,8 +313,14 @@ def check_page(lang,p,s):
     vis_txt=vis_txt.replace('are not unlocked','')  # Counsel's privacy text denies unlocking; that is allowed
     if p=='jpg-to-pdf.html':  # the HEIC -> JPG link target for the error card is the one allowed 'heic' (a link, not a HEIC-input claim)
         a=heic_attrs(lang); assert vis_txt.count(a)==1, f'HEIC card link data missing in {lang}/{p}'; vis_txt=vis_txt.replace(a,'')
-    # FAQ links to the converter's HEIC pages (formats answer, text from Lucas/Nathan): the link itself is allowed
-    vis_txt=re.sub(r'<a class="link link-primary" href="/image-converter/(?:ru/|zh/)?heic-to-[a-z]+\.html">[^<]*</a>','',vis_txt)
+        # the approved formats FAQ answer that links the converter (Lucas/Nathan): exactly that answer, visible and in
+        # FAQPage JSON-LD, is allowed; any other HEIC wording on the page still fails
+        for x in FAQ[lang]['jpg']:
+            if T[lang]['err_heic_link_text'].replace(NB,' ') in x['a']:
+                vis=f'<p>{faq_answer_html(heic_faq_links(lang,x["a"]))}</p>'; assert f'href="{heic_href(lang)}"' in vis and vis in vis_txt, f'HEIC FAQ link missing in {lang}/{p}'
+                vis_txt=vis_txt.replace(vis,'')
+                ld=json.dumps(faq_plain(x['a']),ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
+                assert ld in vis_txt, f'HEIC FAQ JSON-LD text missing in {lang}/{p}'; vis_txt=vis_txt.replace(ld,'')
     assert '\u2011' not in ''.join(re.findall(r'<head>.*?</head>|<[^>]*>|<script type="application/ld\+json">.*?</script>',s,re.S)), f'U+2011 in markup/meta in {lang}/{p}'
     m=BANNED.search(vis_txt); assert not m, f'banned word {m.group(0)!r} in {lang}/{p}'
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):

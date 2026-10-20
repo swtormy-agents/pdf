@@ -11,5 +11,9 @@ w('bank-statement.pdf', encryptedPdf()); w('evil.pdf', await evilPdf()); w('brok
 w('photo-gps.jpg', exifJpeg()); w('meta.png', metadataPng()); w('plain.png', plainPng(40, 30)); w('huge.jpg', jpegWithSize(10000, 6000));
 // 6000 small pages for the split limits (1000 per part, 5000 total, 50 parts)
 { const d6 = await PDFDocument.create(); for (let k = 0; k < 6000; k++) d6.addPage([200, 200]); w('long6000.pdf', await d6.save()); }
+// 60 pages: 'every 1 page' gives 60 parts (> 50 -> err_split_parts)
+w('long60.pdf', await plainPdf(60));
+// a HEIC file (ISO-BMFF 'ftypheic' header only): not JPG/PNG -> UNSUPPORTED_IMAGE with the HEIC -> JPG link
+w('IMG_0001.heic', new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63]));
 w('notes.txt', new TextEncoder().encode('hello'));
 console.log('fixtures in', d);

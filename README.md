@@ -10,7 +10,7 @@ and turn JPG/PNG images into a PDF, entirely in the browser. Files are processed
 |---|---|
 | `index.html`, `merge-pdf.html`, `split-pdf.html`, `organize-pdf.html`, `jpg-to-pdf.html`, `privacy.html`, `licenses.html` | English pages (generated) |
 | `ru/`, `zh/` | Russian and Simplified Chinese pages (generated) |
-| `sitemap.xml` | 15 URLs with hreflang alternates (generated) |
+| `sitemap.xml` | 21 URLs with hreflang alternates (generated) |
 | `assets/app.js`, `assets/worker.js` | esbuild bundles of `tools/src/` + core (generated) |
 | `assets/vendor/pdf.min.js`, `pdf.worker.min.js` | pdfjs-dist, self-hosted, copied verbatim |
 | `build/app.css` | Tailwind 4 + daisyUI 5 build of `tools/css/input.css` |

@@ -174,7 +174,8 @@ function init() {
     c.appendChild(icon(opts.note ? IC.info : IC.err));
     const b = el('div', 'eb');
     const tt = el('p', 'et', title); if (opts.full) tt.title = opts.full;
-    b.append(tt, el('p', 'ef', fix));
+    const ef = el('p', 'ef'); if (Array.isArray(fix)) ef.append(...fix); else ef.textContent = fix;
+    b.append(tt, ef);
     const x = el('button', 'ib'); x.type = 'button'; x.setAttribute('aria-label', t('aria_dismiss')); x.appendChild(icon(IC.x));
     x.addEventListener('click', () => {
       const next = c.nextElementSibling || c.previousElementSibling;
@@ -186,6 +187,11 @@ function init() {
     if (opts.code) c.dataset.code = opts.code;
     errs.appendChild(c);
   }
+  function heicFix() {
+    const d = body.dataset, [a, b = ''] = d.heicFix.split('{link}');
+    const l = el('a', 'link link-primary', d.heicText); l.href = d.heicHref;
+    return [a, l, b];
+  }
   const isImageName = (f) => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp|gif|avif|bmp|tiff?)$/i.test(f.name);
   function errFor(code, f, extra = {}) {
     const name = f ? shortName(f.name) : '';
@@ -193,7 +199,9 @@ function init() {
     switch (code) {
       case 'PDF_ENCRYPTED': return card(t('err_encrypted', { file: name }), t('err_encrypted_fix'), { full, code });
       case 'PDF_INVALID': return card(t('err_invalid', { file: name }), t(f && isImageName(f) ? 'err_invalid_fix_image' : 'err_invalid_fix'), { full, code });
-      case 'UNSUPPORTED_IMAGE': case 'IMAGE_INVALID': return card(t('err_image_invalid', { file: name }), t('err_image_invalid_fix'), { full, code });
+      // .heic/.heif on jpg-to-pdf: the fix links the converter's HEIC -> JPG page (gen.py data-heic-*, Nathan's err_heic_* keys)
+      case 'UNSUPPORTED_IMAGE': return card(t('err_image_invalid', { file: name }), f && /\.hei[cf]$/i.test(f.name) && body.dataset.heicHref ? heicFix() : t('err_image_invalid_fix'), { full, code });
+      case 'IMAGE_INVALID': return card(t('err_image_invalid', { file: name }), t('err_image_invalid_fix'), { full, code });
       // core TOO_LARGE with details.reason 'decompressed': the file unpacks past the core's cap (Nathan's keys)
       case 'TOO_LARGE': return extra.reason === 'decompressed' && f ? card(t('err_too_large_unpacked', { file: name }), t('err_too_large_unpacked_fix'), { full, code })
         : extra.total ? card(t('err_total_large'), t('err_total_large_fix'), { code })
@@ -398,6 +406,13 @@ function init() {
   // ---------- page actions ----------
   let roving = null;
   function setRoving(k) { roving = k; for (const [kk, li] of nodes) li.querySelector('.pick').tabIndex = kk === k ? 0 : -1; }
+  // .pick is display:contents below 600px (no box, cannot take focus): fall back to the card's delete button
+  function focusCard(k) {
+    const li = nodes.get(k); if (!li) return;
+    setRoving(k);
+    const pk = li.querySelector('.pick');
+    (pk.getClientRects().length ? pk : li.querySelector('[data-act=del]')).focus();
+  }
   function focusPage(k) { const li = nodes.get(k); if (li) { setRoving(k); li.querySelector('.pick').focus(); } }
   function move(k, to, announceIt = true) {
     const from = pages.findIndex((p) => p.k === k);
@@ -422,7 +437,7 @@ function init() {
     const nextK = (pages[idx] || pages[idx - 1] || {}).k;
     render();
     showUndo(p, idx);
-    if (nextK) focusPage(nextK); else (addBtn || input).focus();
+    if (nextK) { setRoving(nextK); nodes.get(nextK).querySelector('[data-act=del]').focus(); } else (addBtn || input).focus();
   }
   function showUndo(p, idx) {
     clearTimeout(undoTimer);
@@ -432,8 +447,10 @@ function init() {
     const u = el('button', 'btn btn-sm btn-primary min-h-11', t('undo')); u.type = 'button';
     u.addEventListener('click', () => {
       clearTimeout(undoTimer); toast.hidden = true;
-      pages.splice(Math.min(idx, pages.length), 0, p);
-      render(); focusPage(p.k);
+      const at = Math.min(idx, pages.length);
+      pages.splice(at, 0, p);
+      render(); focusCard(p.k);
+      announce(t('org_restored', { n: at + 1 }));
     });
     a.append(msg, u); toast.appendChild(a); toast.hidden = false;
     announce(t('toast_deleted', { n: idx + 1 }));
@@ -604,15 +621,14 @@ function init() {
     return null;
   }
   // core TOO_MANY_PAGES / TOO_MANY_FILES during split -> one of the three split cards, chosen by the core's
-  // details.limit ('part' | 'total' | 'parts'); without details, the plan is re-checked.
+  // details.limit ('part' | 'total' | 'parts'); core aea0eb0 always sets it.
   const SPLIT_ERR = { part: 'SPLIT_PART_PAGES', total: 'SPLIT_TOTAL_PAGES', parts: 'SPLIT_PARTS' };
-  function splitErrCode(e, plan) {
+  function splitErrCode(e) {
     const d = (e && e.details) || {};
-    if (SPLIT_ERR[d.limit]) return SPLIT_ERR[d.limit];
-    if (e && e.code === 'TOO_MANY_FILES') return 'SPLIT_PARTS';
-    return (plan && splitOver(plan)) || 'SPLIT_PART_PAGES';
+    return SPLIT_ERR[d.limit] || null;
   }
-  let splitPlan = null; // {groups:[[from,to]...]} | {order:[...]}
+  let splitPlan = null, lastErr = '';
+  const rlive = $('rlive'); // {groups:[[from,to]...]} | {order:[...]}
   function renderSplit() {
     const f = files[0];
     if (!f) { go.disabled = true; go.textContent = t('primary_split'); return; }
@@ -660,6 +676,10 @@ function init() {
       const k = 'err_' + over.toLowerCase(); rerr.textContent = t(k) + ' · ' + t(k + '_fix');
     } else delete rerr.dataset.code;
     rangesIn.setAttribute('aria-describedby', rerr.hidden ? 'rhint' : 'rhint rerr');
+    // #rerr moves between blocks and is cleared on every render; #rlive never moves and is never cleared (Olivia 6)
+    const emsg = rerr.hidden ? '' : rerr.textContent;
+    if (emsg && emsg !== lastErr) rlive.textContent = rlive.textContent === emsg ? emsg + NB : emsg;
+    lastErr = emsg;
     go.disabled = !splitPlan || busy;
   }
   if (MODE === 'split') {
@@ -723,8 +743,8 @@ function init() {
         const d = (e && e.details) || {};
         // which file failed: images -> page index; build -> fileId tagged by the worker; split or one file -> that file
         const f = d.fileId !== undefined ? byId(d.fileId) : d.index !== undefined && MODE === 'images' ? byId(pages[d.index].f) : files.length === 1 ? files[0] : null;
-        if (e && ['PDF_ENCRYPTED', 'PDF_INVALID', 'IMAGE_INVALID', 'UNSUPPORTED_IMAGE', 'IMAGE_TOO_LARGE'].includes(e.code) && f) errFor(e.code, f.file);
-        else if (e && MODE === 'split' && ['TOO_MANY_PAGES', 'TOO_MANY_FILES'].includes(e.code)) errFor(splitErrCode(e, splitPlan));
+        if (e && ['PDF_ENCRYPTED', 'PDF_INVALID', 'IMAGE_INVALID', 'IMAGE_TOO_LARGE'].includes(e.code) && f) errFor(e.code, f.file);
+        else if (e && MODE === 'split' && splitErrCode(e)) errFor(splitErrCode(e));
         else if (e && (e.code === 'TOO_MANY_PAGES')) errFor('TOO_MANY_PAGES', null, { n: pages.length });
         else if (e && e.code === 'TOO_LARGE' && d.reason === 'decompressed' && f) errFor('TOO_LARGE', f.file, { reason: 'decompressed' });
         else if (e && e.code === 'TOO_LARGE' && d.reason === 'decompressed') errFor('FAILED');
