@@ -188,8 +188,9 @@ function init() {
     errs.appendChild(c);
   }
   function heicFix() {
-    const d = body.dataset, [a, b = ''] = d.heicFix.split('{link}');
-    const l = el('a', 'link link-primary', d.heicText); l.href = d.heicHref;
+    const tp = $('heic-strings').content, s = (k) => tp.querySelector(`[data-k="${k}"]`).textContent;
+    const [a, b = ''] = s('fix').split('{link}');
+    const l = el('a', 'link link-primary', s('text')); l.href = body.dataset.heicHref;
     return [a, l, b];
   }
   const isImageName = (f) => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp|gif|avif|bmp|tiff?)$/i.test(f.name);
@@ -199,8 +200,8 @@ function init() {
     switch (code) {
       case 'PDF_ENCRYPTED': return card(t('err_encrypted', { file: name }), t('err_encrypted_fix'), { full, code });
       case 'PDF_INVALID': return card(t('err_invalid', { file: name }), t(f && isImageName(f) ? 'err_invalid_fix_image' : 'err_invalid_fix'), { full, code });
-      // .heic/.heif on jpg-to-pdf: the fix links the converter's HEIC -> JPG page (gen.py data-heic-*, Nathan's err_heic_* keys)
-      case 'UNSUPPORTED_IMAGE': return card(t('err_image_invalid', { file: name }), f && /\.hei[cf]$/i.test(f.name) && body.dataset.heicHref ? heicFix() : t('err_image_invalid_fix'), { full, code });
+      // .heic/.heif on jpg-to-pdf: the fix links the converter's HEIC -> JPG page (gen.py data-heic-href + <template id=heic-strings>, Nathan's err_heic_* keys)
+      case 'UNSUPPORTED_IMAGE': return card(t('err_image_invalid', { file: name }), f && /\.hei[cf]$/i.test(f.name) && body.dataset.heicHref && $('heic-strings') ? heicFix() : t('err_image_invalid_fix'), { full, code });
       case 'IMAGE_INVALID': return card(t('err_image_invalid', { file: name }), t('err_image_broken_fix'), { full, code });
       // core TOO_LARGE with details.reason 'decompressed': the file unpacks past the core's cap (Nathan's keys)
       case 'TOO_LARGE': return extra.reason === 'decompressed' && f ? card(t('err_too_large_unpacked', { file: name }), t('err_too_large_unpacked_fix'), { full, code })

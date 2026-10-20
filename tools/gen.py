@@ -184,7 +184,11 @@ def heic_attrs(lang):
     same language (SEO §6, UX review: only there and in the formats FAQ answer). Text from Nathan's keys err_heic_fix
     ({link} placeholder) and err_heic_link_text; these keys are NOT in the page-wide i18n block (see i18n_block)."""
     t=T[lang]
-    return f' data-heic-href="{heic_href(lang)}" data-heic-text="{e(plain(t["err_heic_link_text"]))}" data-heic-fix="{e(plain(t["err_heic_fix"]))}"'
+    return f' data-heic-href="{heic_href(lang)}"'
+def heic_template(lang):
+    """Card texts as visible-text nodes (not attributes) so ru keeps Nathan's U+00A0; app.js reads template.content textContent."""
+    t=T[lang]
+    return f'<template id="heic-strings"><span data-k="fix">{e(t["err_heic_fix"])}</span><span data-k="text">{e(t["err_heic_link_text"])}</span></template>\n'
 def heic_faq_links(lang,a):
     """jpg formats FAQ answer: the converter name (= err_heic_link_text) becomes a link in the visible FAQ only."""
     lt=T[lang]['err_heic_link_text'].replace(NB,' ')  # FAQ text uses plain spaces
@@ -227,7 +231,7 @@ def tool_page(lang,page,key,mode):
         out+=(f'<section class="hero"><div class="hero-l"><h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(t["lede"])}</p>{dropzone(lang,"merge")}</div>{HERO_ART}</section>\n'
               +app(lang,mode,hub=True)+modecards(lang))
     else:
-        out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode))
+        out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode)+(heic_template(lang) if mode=='images' else ''))
     out+=faq_html(lang,faqs,heic=mode=='images')
     # task pages: H2 'Other PDF tools' (Nathan's other_tools) after the FAQ, same heading style, the 3 other tools only
     if not hub: out+=(f'<section class="others mt-12" aria-labelledby="others-h"><h2 id="others-h" class="text-2xl font-semibold">{e(t["other_tools"])}</h2><div class="mt-4">'
@@ -315,6 +319,7 @@ def check_page(lang,p,s):
     vis_txt=vis_txt.replace('are not unlocked','')  # Counsel's privacy text denies unlocking; that is allowed
     if p=='jpg-to-pdf.html':  # the UNSUPPORTED_IMAGE card's HEIC -> JPG link data must be present exactly once
         assert s.count(heic_attrs(lang))==1, f'HEIC card link data missing in {lang}/{p}'
+        assert s.count(heic_template(lang))==1, f'HEIC card strings template missing in {lang}/{p}'
         assert f'<a class="link link-primary" href="{heic_href(lang)}">' in s, f'HEIC FAQ link missing in {lang}/{p}'
     assert '\u2011' not in ''.join(re.findall(r'<head>.*?</head>|<[^>]*>|<script type="application/ld\+json">.*?</script>',s,re.S)), f'U+2011 in markup/meta in {lang}/{p}'
     m=BANNED.search(vis_txt); assert not m, f'banned word {m.group(0)!r} in {lang}/{p}'

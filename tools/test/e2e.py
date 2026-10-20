@@ -338,7 +338,11 @@ async def run(bname, p, tmp):
         info = await pg.eval_on_selector_all('#errs .ecard', "e => e.map(x => [x.dataset.code, (x.querySelector('.ef a') || {}).href || null, (x.querySelector('.ef a') || {}).textContent || null])")
         href = src[l]['err_heic_url'].replace('https://noclaudkit.com', 'http://127.0.0.1:8931')
         ok(pre + f'HEIC card {l}: link to the HEIC -> JPG converter, other unsupported files without it',
-           info == [['UNSUPPORTED_IMAGE', href, src[l]['err_heic_link_text'].replace('\xa0', ' ')], ['UNSUPPORTED_IMAGE', None, None]], info)
+           info == [['UNSUPPORTED_IMAGE', href, src[l]['err_heic_link_text']], ['UNSUPPORTED_IMAGE', None, None]], info)
+        fx = await pg.eval_on_selector('#errs .ecard:nth-child(1) .ef', 'e => e.textContent')
+        want_fx = src[l]['err_heic_fix'].replace('{link}', src[l]['err_heic_link_text'])
+        ok(pre + f'HEIC card {l}: fix text keeps Nathan\'s string' + (' with U+00A0' if l == 'ru' else ''),
+           fx == want_fx and (l != 'ru' or '\xa0' in fx), (fx, want_fx))
         await pg.close()
 
     # ---- Nathan 20.10 strings: FAQ HEIC link, broken image hint, every-N error, Other PDF tools H2, plurals, huge spec ----
