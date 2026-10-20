@@ -245,18 +245,23 @@ def md_inline(s):
     s=re.sub(r'\*\*(.+?)\*\*',r'<b>\1</b>',s); s=re.sub(r'`([^`]+)`',r'<code>\1</code>',s)
     return s
 LIBS=None
+# Counsel PASS 20.10 (Sarah; zh proofread by Nathan): the Metadata paragraph is replaced by this exact HTML (ru: only NBSP typography via vis()).
+PRIV_META={
+ 'en':'<p><b>Metadata.</b> The saved PDF is always a new document with no document information (author, title, subject, keywords, creating program, dates) and no XMP metadata. Metadata in JPEG images (EXIF including GPS location, XMP, IPTC, comments) is removed, both from images in your PDF pages and from photos added with &quot;JPG and photos to PDF&quot;; from PNG images only the pixels are kept. Data needed to display the pages is kept and may contain incidental information: for example, embedded fonts (which may include the font author&#x27;s name), ICC colour profiles, and metadata inside JPEG 2000 images and inline images. The text and content of the pages are not changed.</p>',
+ 'ru':'<p><b>Метаданные.</b> Сохранённый PDF всегда создаётся как новый документ: в нём нет сведений о документе (автор, название, тема, ключевые слова, программа, даты) и метаданных XMP. Из JPEG-изображений удаляются метаданные (EXIF, включая GPS-координаты, XMP, IPTC, комментарии) — и из изображений на страницах ваших PDF, и из фото, добавленных через «Фото и JPG в PDF»; из PNG в файл попадают только пиксели. Данные, нужные для отображения страниц, сохраняются и могут содержать служебные сведения: например, встроенные шрифты (в них бывает имя автора шрифта), цветовые профили ICC, а также метаданные внутри изображений JPEG 2000 и встроенных (inline) изображений. Сам текст и содержимое страниц не меняются.</p>',
+ 'zh':'<p><b>元数据。</b>保存的 PDF 始终是一个新文档，不含文档信息（作者、标题、主题、关键词、生成程序、日期），也不含 XMP 元数据。JPEG 图片中的元数据会被删除，包括 EXIF（含 GPS 位置信息）、XMP、IPTC 和注释；这适用于您 PDF 页面中的图片以及通过“JPG 和照片转 PDF”添加的照片。PNG 图片只保留像素数据。显示页面所需的数据会被保留，其中可能包含附带信息，例如嵌入的字体（可能含有字体作者的姓名）、ICC 颜色配置文件，以及 JPEG 2000 图片和内嵌（inline）图片中的元数据。页面的文字和内容不会被更改。</p>'}
+META_HEAD=('**Metadata.**','**Метаданные.**','**元数据。**')
 def privacy_page(lang):
     t=T[lang]; P=PRIV[lang]; libs='pdf-lib, pdf.js' if lang!='zh' else 'pdf-lib、pdf.js'
     paras=[]; fixed=0
     for p in P['privacy'][1:]:
+        if p.startswith(META_HEAD):
+            fixed+=1; paras.append(vis(lang,PRIV_META[lang]).replace(' —',NB+'—') if lang=='ru' else PRIV_META[lang]); continue
         p=p.replace('{pdf-lib, pdf.js}',libs).replace('{pdf-lib、pdf.js}',libs)
         # No offline claim until a service worker ships (spec §7, Lucas §8): the offline sentence is not published.
         p=re.sub(r'\s*(After the page has loaded, the tool also works offline\.|После загрузки страницы инструмент работает и без интернета\.|页面加载完成后，本工具也可离线使用。)','',p)
-        # Images to PDF does not re-encode JPEGs (core strips EXIF/GPS segments); the approved UI line meta_notice states what is true.
-        p,nrep=re.subn(r'(Images added with "Images to PDF" are re-encoded, so their EXIF data \(including GPS location\) is not included\.|Изображения, добавленные через «Изображения в PDF», перекодируются, поэтому их EXIF \(включая GPS-координаты\) в файл не попадает\.|通过“图片转 PDF”添加的图片会重新编码，因此(?:不包含其 EXIF 数据（包括 GPS 位置）|其 EXIF 数据（包括 GPS 位置信息）不会保留在文件中)。)',lambda m:UI[lang]['meta_notice'].replace(NB,' '),p)
-        fixed+=nrep
         paras.append(f'<p>{vis(lang,md_inline(p))}</p>')
-    assert fixed==1, f'privacy {lang}: re-encoding sentence not found (Counsel text changed?)'
+    assert fixed==1, f'privacy {lang}: Metadata paragraph not found (Counsel text changed?)'
     assert not re.search(r're-encoded|перекодируются|重新编码|offline|без интернета|离线',' '.join(paras)), f'privacy {lang}: unverified claim left'
     h1=re.sub(r'\*','',P['privacy'][0]); dh=re.sub(r'\*','',P['disclaimer'][0])
     body=(f'<h1 id="h1">{e(vis(lang,h1))}</h1>\n'+'\n'.join(paras)+f'\n<h2>{e(dh)}</h2>\n'+'\n'.join(f'<p>{vis(lang,md_inline(p))}</p>' for p in P['disclaimer'][1:])+'\n')

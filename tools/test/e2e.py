@@ -19,7 +19,8 @@ async def _screenshot(self, *a, **k):
     finally:
         SHOOTING['n'] -= 1
 Page.screenshot = _screenshot
-B = 'http://127.0.0.1:8931/pdf/'
+PORT = os.environ.get('E2E_PORT', '8931')  # shared box: another checkout may hold 8931
+B = f'http://127.0.0.1:{PORT}/pdf/'
 HERE = os.path.dirname(os.path.abspath(__file__)); FX = HERE + '/out/fx/'
 SHOTS = os.environ.get('SHOTS', '/workspace/tmp/pdf-site')
 RES = []
@@ -336,7 +337,7 @@ async def run(bname, p, tmp):
         await pg.set_input_files('#files', [FX + 'IMG_0001.heic', FX + 'notes.txt'])
         await pg.wait_for_selector('#errs .ecard:nth-child(2)'); await pg.wait_for_selector('#proc', state='hidden')
         info = await pg.eval_on_selector_all('#errs .ecard', "e => e.map(x => [x.dataset.code, (x.querySelector('.ef a') || {}).href || null, (x.querySelector('.ef a') || {}).textContent || null])")
-        href = src[l]['err_heic_url'].replace('https://noclaudkit.com', 'http://127.0.0.1:8931')
+        href = src[l]['err_heic_url'].replace('https://noclaudkit.com', f'http://127.0.0.1:{PORT}')
         ok(pre + f'HEIC card {l}: link to the HEIC -> JPG converter, other unsupported files without it',
            info == [['UNSUPPORTED_IMAGE', href, src[l]['err_heic_link_text']], ['UNSUPPORTED_IMAGE', None, None]], info)
         fx = await pg.eval_on_selector('#errs .ecard:nth-child(1) .ef', 'e => e.textContent')
