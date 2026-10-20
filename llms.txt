@@ -1,0 +1,29 @@
+# Local PDF Tools
+
+> Merge, split, reorder pages and turn images into PDF right in your browser. Files stay on your device. Free, no sign-up, no watermark.
+
+Files are processed in your browser and never leave your device. Free and open source. Files stay on your device: no uploads, no cookies, no ads.
+
+## Tools
+
+- [Merge](https://noclaudkit.com/pdf/merge-pdf.html): Combine several PDFs into one
+- [Split](https://noclaudkit.com/pdf/split-pdf.html): Ranges, every N pages, extract
+- [Reorder pages](https://noclaudkit.com/pdf/organize-pdf.html): Move, rotate, delete
+- [Images to PDF](https://noclaudkit.com/pdf/jpg-to-pdf.html): JPG and PNG into one PDF
+
+## Docs
+
+- [PDF: merge, split, reorder](https://noclaudkit.com/pdf/index.md)
+- [Merge PDF files without uploading](https://noclaudkit.com/pdf/merge-pdf.md)
+- [Split a PDF and extract pages](https://noclaudkit.com/pdf/split-pdf.md)
+- [Reorder, delete and rotate PDF pages](https://noclaudkit.com/pdf/organize-pdf.md)
+- [JPG and photos to PDF](https://noclaudkit.com/pdf/jpg-to-pdf.md)
+- [Privacy](https://noclaudkit.com/pdf/privacy.md)
+- [Licences](https://noclaudkit.com/pdf/licenses.md)
+
+## Optional
+
+- [Source code](https://github.com/swtormy-agents/pdf): MIT
+- [Local PDF Tools (HTML)](https://noclaudkit.com/pdf/)
+
+Not affiliated with or endorsed by any device, browser or software maker; format names are used descriptively.
