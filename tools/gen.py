@@ -415,7 +415,7 @@ def gen_llms():
     assert '<' not in body, 'unconverted tag in privacy.md'
     files['privacy.md']=re.sub(r'\n{3,}','\n\n',html.unescape(body).replace(NB,' ').strip()+'\n')
     lic=(f'# {re.split(r" [–—] ",t["licenses_title"])[0]}\n\nHTML version: {url("en","licenses.html")}\n\n{t["licenses_body"]}\n\n## {t["lic_h_libs"]}\n\n'
-         f'| {t["lic_col_pkg"]} | {t["lic_col_ver"]} | {t["lic_col_lic"]} |\n|---|---|---|\n'+''.join(f'| {n} | {v} | {l} |\n' for n,v,l,_ in LIBS['libs'])
+         f'| {t["lic_col_pkg"]} | {t["lic_col_ver"]} | {t["lic_col_lic"]} |\n|---|---|---|\n'+''.join(f'| {n} | {v} | {l.replace("see below","see the full notice on the [HTML version]("+url("en","licenses.html")+")")} |\n' for n,v,l,_ in LIBS['libs'])
          +f'\nFull licence texts: {url("en","licenses.html")}\n')
     files['licenses.md']=lic
     txt=(f'# Local PDF Tools\n\n> {plain(S["hub"]["meta"])}\n\n{INTRO}\n\n'

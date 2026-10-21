@@ -9,7 +9,7 @@ Local PDF Tools is MIT-licensed. Third-party components and their licences are l
 | Package | Version | Licence |
 |---|---|---|
 | @local-pdf-tools/core | 0.1.0 | MIT |
-| pdf-lib | 1.17.1 | MIT (embeds Apache-2.0 and MIT code, see below) |
+| pdf-lib | 1.17.1 | MIT (embeds Apache-2.0 and MIT code, see the full notice on the [HTML version](https://noclaudkit.com/pdf/licenses.html)) |
 | @pdf-lib/standard-fonts | 1.0.0 | MIT |
 | @pdf-lib/upng | 1.0.1 | MIT |
 | pako | 1.0.11 | MIT AND Zlib |
