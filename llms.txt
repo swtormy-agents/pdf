@@ -19,7 +19,7 @@ Files are processed in your browser and never leave your device. Free and open s
 - [Reorder, delete and rotate PDF pages](https://noclaudkit.com/pdf/organize-pdf.md)
 - [JPG and photos to PDF](https://noclaudkit.com/pdf/jpg-to-pdf.md)
 - [Privacy](https://noclaudkit.com/pdf/privacy.md)
-- [Licenses](https://noclaudkit.com/pdf/licenses.md)
+- [Licences](https://noclaudkit.com/pdf/licenses.md)
 
 ## Optional
 

@@ -378,7 +378,6 @@ def gen_llms():
     INTRO='Files are processed in your browser and never leave your device. Free and open source: no uploads, no cookies, no ads.'  # Nathan-approved; BANNED-checked via w()
     md_url=lambda p:BASE+p[:-5]+'.md'
     def w(path,s):
-        s=re.sub(r'([Ll])icence',r'\1icense',s)  # US spelling in generated agent docs (Nathan)
         chk=s.replace('are not unlocked','')  # same Counsel exemption as check_page
         m=BANNED.search(chk); assert not m, f'banned word {m.group(0)!r} in {path}'
         assert NB not in s and '\u2011' not in s, f'non-plain space/hyphen in {path}'
