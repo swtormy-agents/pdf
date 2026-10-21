@@ -24,7 +24,7 @@ Yes. The PDF is split in your browser on your device and is never sent to a serv
 
 ### Does a split PDF keep the original metadata?
 
-No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed.
+No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Data needed to display the pages, for example fonts, ICC profiles, and JPEG 2000 or inline images, is kept as is. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed.
 
 ## Other PDF tools
 

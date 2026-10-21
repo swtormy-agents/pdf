@@ -19,7 +19,8 @@ async def _screenshot(self, *a, **k):
     finally:
         SHOOTING['n'] -= 1
 Page.screenshot = _screenshot
-B = 'http://127.0.0.1:8931/pdf/'
+PORT = os.environ.get('E2E_PORT', '8931')  # shared box: another checkout may hold 8931
+B = f'http://127.0.0.1:{PORT}/pdf/'
 HERE = os.path.dirname(os.path.abspath(__file__)); FX = HERE + '/out/fx/'
 SHOTS = os.environ.get('SHOTS', '/workspace/tmp/pdf-site')
 RES = []
@@ -279,7 +280,7 @@ async def run(bname, p, tmp):
         ok(pre + f'split errors {l}: part / total texts, every 1 page on 60 pages -> err_split_parts', all(got), (got, tx))
         await pg.close()
 
-    # ---- PAGE_RANGE is written to a stable polite region (#rlive: never moved, never cleared) ----
+    # ---- PAGE_RANGE is written to a stable polite region (#rlive: never moved, cleared once resolved) ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
     await pg.goto(B + 'split-pdf.html'); await ready(pg)
     await pg.set_input_files('#files', [FX + 'long24.pdf']); await loaded(pg)
@@ -289,8 +290,8 @@ async def run(bname, p, tmp):
     await pg.fill('#ranges', '1-3'); l2 = await pg.inner_text('#rlive')
     await pg.check('input[name=smode][value=every]'); await pg.fill('#every', '30'); l3 = await pg.inner_text('#rlive')
     par1 = await pg.evaluate("document.getElementById('rlive').parentElement.tagName + (document.getElementById('rlive').getAttribute('aria-live'))")
-    ok(pre + 'split PAGE_RANGE: error text in #rlive (polite), kept after the error clears, region not moved',
-       src['en']['err_range'] in l1 and '24' in l1 and l2 == l1 and l3 == src['en']['err_every_n'].replace('{pageCount}', '24') and par0 == par1 == 'FIELDSETpolite', (par0, par1, l1, l2, l3))
+    ok(pre + 'split PAGE_RANGE: error text in #rlive (polite), emptied when the error is resolved (element kept), region not moved',
+       src['en']['err_range'] in l1 and '24' in l1 and l2 == '' and await pg.locator('#rlive').count() == 1 and l3 == src['en']['err_every_n'].replace('{pageCount}', '24') and par0 == par1 == 'FIELDSETpolite', (par0, par1, l1, l2, l3))
     await pg.close()
 
     # ---- organize at 375 (.pick is display:contents) and 1280: delete -> neighbour's delete button; Undo -> restored card, announced ----
@@ -306,6 +307,90 @@ async def run(bname, p, tmp):
         ok(pre + f'organize {wd}: delete focuses the neighbour delete button, Undo focuses the restored card + org_restored',
            f1 == ['del', 1] and f2[0] == 'BUTTON' and f2[1] == 1 and f2[2] and lv == 'Page 2 restored', (f1, f2, lv))
         await pg.close()
+
+    # ---- Undo toast (v1 scope 3): DOM after the grid, Tab reaches it, 10 s, paused on focus/hover, Ctrl/Cmd+Z, last page -> Undo ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'organize-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'contract.pdf']); await loaded(pg)
+    n0 = await pg.locator('#pages > .pc').count()
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click()
+    dom = await pg.evaluate("document.getElementById('pages').nextElementSibling && document.getElementById('pages').nextElementSibling.id")
+    await pg.keyboard.press('Tab'); tab = await pg.evaluate("!!document.activeElement.closest('#toast')")
+    ok(pre + 'undo: toast is the next DOM sibling of the page grid, next Tab reaches Undo', dom == 'toast' and tab, (dom, tab))
+    await pg.wait_for_timeout(11000)
+    ok(pre + 'undo: timer paused while Undo has focus (11 s)', await pg.is_visible('#toast'))
+    await pg.click('#toast button'); await pg.wait_for_timeout(100)
+    ok(pre + 'undo: Undo after pause restores', await pg.locator('#pages > .pc').count() == n0)
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click()
+    await pg.hover('#toast button'); await pg.wait_for_timeout(10800)
+    hov = await pg.is_visible('#toast'); await pg.mouse.move(1, 1)
+    ok(pre + 'undo: timer paused while Undo is hovered', hov)
+    await pg.click('#toast button'); await pg.wait_for_timeout(100)
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click(); await pg.mouse.move(1, 1)
+    await pg.wait_for_timeout(9300); v9 = await pg.is_visible('#toast')
+    await pg.wait_for_timeout(1500); v11 = await pg.is_visible('#toast')
+    ok(pre + 'undo: toast visible at 9.3 s, gone at 10.8 s (10 s timeout)', v9 and not v11, (v9, v11))
+    n1 = await pg.locator('#pages > .pc').count()
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click()
+    await pg.keyboard.press('Meta+z' if bname == 'webkit' else 'Control+z'); await pg.wait_for_timeout(100)
+    ok(pre + 'undo: Ctrl/Cmd+Z undoes while the toast is visible', await pg.locator('#pages > .pc').count() == n1 and not await pg.is_visible('#toast'))
+    while await pg.locator('#pages > .pc').count() > 1:
+        await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click(); await pg.wait_for_timeout(50)
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click(); await pg.wait_for_timeout(100)
+    lastf = await pg.evaluate("!!document.activeElement.closest('#toast')")
+    ok(pre + 'undo M1: deleting the last page focuses Undo', lastf)
+    await pg.close()
+
+    # ---- mode tabs 2x2 grid below 600px, inactive tab + licences th contrast, language menu 44px ----
+    CONTRAST = """(sel) => { const el = document.querySelector(sel); const cv = document.createElement('canvas'); cv.width = cv.height = 1; const c = cv.getContext('2d', { willReadFrequently: true });
+      const rgb = (col) => { c.clearRect(0, 0, 1, 1); c.fillStyle = '#fff'; c.fillRect(0, 0, 1, 1); c.fillStyle = col; c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3); };
+      const bgs = []; for (let n = el; n; n = n.parentElement) { const b = getComputedStyle(n).backgroundColor; if (b && b !== 'transparent' && b !== 'rgba(0, 0, 0, 0)') bgs.unshift(b); }
+      c.clearRect(0, 0, 1, 1); c.fillStyle = '#fff'; c.fillRect(0, 0, 1, 1); for (const b of bgs) { c.fillStyle = b; c.fillRect(0, 0, 1, 1); }
+      const bg = [...c.getImageData(0, 0, 1, 1).data].slice(0, 3); c.fillStyle = getComputedStyle(el).color; c.fillRect(0, 0, 1, 1); const fg = [...c.getImageData(0, 0, 1, 1).data].slice(0, 3);
+      const L = (a) => { const v = a.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const a = L(fg), b = L(bg); return Math.round((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) * 100) / 100; }"""
+    for scheme in ('light', 'dark'):
+        c3 = await browser.new_context(color_scheme=scheme); await c3.add_init_script(INIT)
+        for wd in (375, 599):
+            pg = await newpage(c3, wd, 800); w = Watch(pg, bname); watches.append(w)
+            await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+            g = await pg.evaluate("""() => { const t = document.querySelector('.tabs.modetabs'); const r = [...t.querySelectorAll('.tab')].map(x => x.getBoundingClientRect());
+                return [getComputedStyle(t).display, new Set(r.map(x => Math.round(x.top))).size, new Set(r.map(x => Math.round(x.left))).size, r.length]; }""")
+            ok(pre + f'mode tabs {scheme} {wd}: 2x2 grid', g == ['grid', 2, 2, 4], g)
+            if wd == 375:
+                cr = await pg.evaluate(CONTRAST, '.tabs.modetabs > .tab:not(.tab-active)')
+                ok(pre + f'mode tabs {scheme}: inactive tab contrast >= 4.5', cr >= 4.5, cr)
+            await pg.close()
+        pg = await newpage(c3, 1280, 800); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + 'licenses.html'); await pg.wait_for_load_state('load')
+        cr = await pg.evaluate(CONTRAST, '.table thead th')
+        ok(pre + f'licences {scheme}: table header contrast >= 4.5', cr >= 4.5, cr)
+        await c3.close()
+    pg = await newpage(ctx, 375, 800); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'ru/'); await pg.wait_for_load_state('load')
+    await pg.click('details.settings summary'); await pg.wait_for_timeout(100)
+    hs = await pg.evaluate("[...document.querySelectorAll('details.settings a[hreflang]')].map(a => Math.round(a.getBoundingClientRect().height))")
+    ok(pre + 'language menu: touch targets >= 44px', hs and min(hs) >= 44, hs)
+    await pg.close()
+
+    # ---- FAQ visible == FAQPage JSON-LD on every page; ru privacy Metadata paragraph keeps U+00A0 typography ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    bad = []
+    for lang in ('', 'ru/', 'zh/'):
+        for pth in ('', 'merge-pdf.html', 'split-pdf.html', 'organize-pdf.html', 'jpg-to-pdf.html'):
+            await pg.goto(B + lang + pth); await pg.wait_for_load_state('load')
+            r = await pg.evaluate("""() => { const vis = [...document.querySelectorAll('.faq details')].map(d => [d.querySelector('summary').textContent, d.querySelector('.collapse-content').textContent]);
+                const ld = [...document.querySelectorAll('script[type="application/ld+json"]')].map(x => JSON.parse(x.textContent)).flat().find(x => x['@type'] === 'FAQPage');
+                const l = ld ? ld.mainEntity.map(q => [q.name, q.acceptedAnswer.text]) : null; const n = (s) => s.replace(/\u00a0/g, ' ');
+                return !!l && vis.length === l.length && vis.every((v, i) => n(v[0]) === l[i][0] && n(v[1]) === l[i][1]); }""")
+            if not r: bad.append(lang + pth)
+    ok(pre + 'FAQ: visible text == FAQPage JSON-LD word for word (15 pages)', not bad, bad)
+    await pg.goto(B + 'organize-pdf.html'); await pg.wait_for_load_state('load')
+    ok(pre + 'FAQ organize: Undo 10 seconds', 'undo it for 10 seconds' in await pg.evaluate("document.querySelector('.faq').textContent"))
+    await pg.goto(B + 'ru/privacy.html'); await pg.wait_for_load_state('load')
+    mp = await pg.evaluate("[...document.querySelectorAll('main p')].map(p => p.textContent).find(t => t.startsWith('Метаданные.'))")
+    ok(pre + 'ru privacy Metadata: Counsel text with U+00A0 typography', bool(mp) and '\u00a0' in mp and mp.replace('\u00a0', ' ').startswith('Метаданные. Сохранённый PDF всегда создаётся как новый документ') and mp.replace('\u00a0', ' ').endswith('Сам текст и содержимое страниц не меняются.'), mp)
+    await pg.close()
 
     # ---- encrypted card on merge: closeable, the file stays out of the list ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
@@ -336,7 +421,7 @@ async def run(bname, p, tmp):
         await pg.set_input_files('#files', [FX + 'IMG_0001.heic', FX + 'notes.txt'])
         await pg.wait_for_selector('#errs .ecard:nth-child(2)'); await pg.wait_for_selector('#proc', state='hidden')
         info = await pg.eval_on_selector_all('#errs .ecard', "e => e.map(x => [x.dataset.code, (x.querySelector('.ef a') || {}).href || null, (x.querySelector('.ef a') || {}).textContent || null])")
-        href = src[l]['err_heic_url'].replace('https://noclaudkit.com', 'http://127.0.0.1:8931')
+        href = src[l]['err_heic_url']  # absolute noclaudkit.com URL as in the JSON
         ok(pre + f'HEIC card {l}: link to the HEIC -> JPG converter, other unsupported files without it',
            info == [['UNSUPPORTED_IMAGE', href, src[l]['err_heic_link_text']], ['UNSUPPORTED_IMAGE', None, None]], info)
         fx = await pg.eval_on_selector('#errs .ecard:nth-child(1) .ef', 'e => e.textContent')
@@ -351,7 +436,7 @@ async def run(bname, p, tmp):
         await pg.goto(B + lang + 'jpg-to-pdf.html'); await ready(pg)
         a = await pg.evaluate("""() => [...document.querySelectorAll('.faq .collapse-content a')].map(x => [x.getAttribute('href'), x.textContent])""")
         ld = await pg.evaluate("""() => [...document.querySelectorAll('script[type="application/ld+json"]')].map(x => x.textContent).join('')""")
-        want = [[src[l]['err_heic_url'].replace('https://noclaudkit.com', ''), src[l]['err_heic_link_text'].replace('\xa0', ' ')]]
+        want = [[src[l]['err_heic_url'], src[l]['err_heic_link_text'].replace('\xa0', ' ')]]
         ok(pre + f'jpg FAQ {l}: converter name linked to heic-to-jpg, FAQPage text without the URL', a == want and 'heic-to-jpg' not in ld and want[0][1] in ld, (a, want))
         h2 = await pg.evaluate("""() => { const hs = [...document.querySelectorAll('main h2, h2')].map(h => h.id); const s = document.querySelector('section.others');
             return [hs.indexOf('faq-h') < hs.indexOf('others-h'), s && s.querySelector('h2').textContent, s && s.querySelector('h2').className === document.getElementById('faq-h').className,

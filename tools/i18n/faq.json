@@ -67,7 +67,7 @@
    },
    {
     "q": "Does a split PDF keep the original metadata?",
-    "a": "No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed."
+    "a": "No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Data needed to display the pages, for example fonts, ICC profiles, and JPEG 2000 or inline images, is kept as is. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed."
    }
   ],
   "organize": [
@@ -81,7 +81,7 @@
    },
    {
     "q": "How do I delete pages from a PDF?",
-    "a": "Press the delete button on a page, or select it and press Delete. You can undo it for 5 seconds after you delete."
+    "a": "Press the delete button on a page, or select it and press Delete. You can undo it for 10 seconds after you delete."
    },
    {
     "q": "How do I rotate PDF pages?",
@@ -187,7 +187,7 @@
    },
    {
     "q": "Сохраняются ли метаданные исходного PDF при разделении?",
-    "a": "Нет. В новые файлы не переносятся свойства документа (автор, программа создания, производитель PDF) и метаданные XMP. Поля форм и введённые в них значения, вложения и JavaScript тоже не копируются. Ссылки на сайты и адреса электронной почты сохраняются, а ссылки на другие страницы внутри документа и комментарии удаляются."
+    "a": "Нет. В новые файлы не переносятся свойства документа (автор, программа создания, производитель PDF) и метаданные XMP. Данные, нужные для показа страниц, сохраняются как есть: например, шрифты, цветовые профили ICC, изображения JPEG 2000 и встроенные (inline) изображения. Поля форм и введённые в них значения, вложения и JavaScript тоже не копируются. Ссылки на сайты и адреса электронной почты сохраняются, а ссылки на другие страницы внутри документа и комментарии удаляются."
    }
   ],
   "organize": [
@@ -201,7 +201,7 @@
    },
    {
     "q": "Как удалить страницы из PDF?",
-    "a": "Нажмите кнопку удаления на странице или выберите её и нажмите Delete. В течение 5 секунд после удаления его можно отменить."
+    "a": "Нажмите кнопку удаления на странице или выберите её и нажмите Delete. В течение 10 секунд после удаления его можно отменить."
    },
    {
     "q": "Как повернуть страницы PDF?",
@@ -307,7 +307,7 @@
    },
    {
     "q": "拆分后的 PDF 会保留原始元数据吗？",
-    "a": "不会。新文件不会保留作者、创建程序、PDF 生成器等文档属性以及 XMP 元数据。表单字段及其中填写的内容、附件和 JavaScript 也不会被复制。网页链接和电子邮件链接会保留；跳转到文档内其他页面的链接和注释会被删除。"
+    "a": "不会。新文件不会保留作者、创建程序、PDF 生成器等文档属性以及 XMP 元数据。显示页面所需的数据会原样保留，例如字体、ICC 颜色配置文件、JPEG 2000 图片和内嵌（inline）图片。表单字段及其中填写的内容、附件和 JavaScript 也不会被复制。网页链接和电子邮件链接会保留；跳转到文档内其他页面的链接和注释会被删除。"
    }
   ],
   "organize": [
@@ -321,7 +321,7 @@
    },
    {
     "q": "如何删除 PDF 中的页面？",
-    "a": "点击页面上的删除按钮，或选中页面后按 Delete 键。删除后 5 秒内可以撤销。"
+    "a": "点击页面上的删除按钮，或选中页面后按 Delete 键。删除后 10 秒内可以撤销。"
    },
    {
     "q": "如何旋转 PDF 页面？",

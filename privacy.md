@@ -10,7 +10,7 @@ HTML version: https://noclaudkit.com/pdf/privacy.html
 
 **Theme setting.** The only thing this site stores in your browser is your theme choice (Light or Dark), kept locally in localStorage under the key `lic-theme`. It is never sent anywhere and is not a cookie. Choosing System removes it; you can also clear it by clearing this site's data in your browser.
 
-**Metadata.** By default the saved PDF does not keep the document's Author, Title, Subject, Keywords or XMP metadata, and the "Producer" field is set to a neutral value. EXIF data and location are removed from the photos.
+**Metadata.** The saved PDF is always a new document with no document information (author, title, subject, keywords, creating program, dates) and no XMP metadata. Metadata in JPEG images (EXIF including GPS location, XMP, IPTC, comments) is removed, both from images in your PDF pages and from photos added with "JPG and photos to PDF"; from PNG images only the pixels are kept. Data needed to display the pages is kept and may contain incidental information: for example, embedded fonts (which may include the font author's name), ICC colour profiles, and metadata inside JPEG 2000 images and inline images. The text and content of the pages are not changed.
 
 **Protected PDFs.** Password-protected or restricted PDFs are not unlocked. If a file is protected, remove the protection in software where you have the rights to do so, then try again.
 

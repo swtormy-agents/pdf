@@ -16,5 +16,7 @@ Local PDF Tools is MIT-licensed. Third-party components and their licences are l
 | tslib | 1.14.1 | 0BSD |
 | base64-arraybuffer | 0.1.5 | MIT |
 | pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 |
+| tailwindcss | 4.3.3 | MIT |
+| daisyui | 5.7.50 | MIT |
 
 Full licence texts: https://noclaudkit.com/pdf/licenses.html

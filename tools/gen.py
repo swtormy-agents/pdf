@@ -86,7 +86,7 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
     def li(l):
         cur=l==lang
         tail=CHECK if cur else (f'<span class="ms-auto text-xs text-base-content/70">{LANG_CODE[l]}</span>' if LANG_CODE[l] else '')
-        return (f'<li><a class="min-h-11'+(' menu-active' if cur else '')+f'" href="{ROOT}{lp(l)}{"" if page=="index.html" else page}" hreflang="{HREFLANG[l]}" lang="{HREFLANG[l]}"'
+        return (f'<li><a class="min-h-[44px] items-center'+(' menu-active' if cur else '')+f'" href="{ROOT}{lp(l)}{"" if page=="index.html" else page}" hreflang="{HREFLANG[l]}" lang="{HREFLANG[l]}"'
                 +(' aria-current="page"' if cur else '')+f'>{e(LANG_NAME[l])}{" "+tail if tail else ""}</a></li>')
     radios=''.join(f'<input class="join-item btn btn-ghost flex-1 min-h-11 theme-opt" type="radio" name="theme" value="{v}" aria-label="{e(t[v])}" title="{e(t[v])}"'+(' checked' if v=='system' else '')+'>' for v in ('system','light','dark'))
     aria=''.join(f' data-l-{k}="{e(t["settings_aria_"+k])}"' for k in ('system','light','dark','mobile'))
@@ -177,8 +177,8 @@ def app(lang,mode,hub=False):
 HEIC_HREF='/image-converter/{lp}heic-to-jpg.html'  # verified in swtormy-agents/image-converter main: heic-to-jpg.html, ru/, zh/
 def heic_href(lang):
     """Nathan's err_heic_url must point at the same converter page; it is emitted as a same-site path."""
-    h=HEIC_HREF.format(lp=lp(lang)); assert UI[lang]['err_heic_url']=='https://noclaudkit.com'+h, f'err_heic_url mismatch in {lang}'
-    return h
+    h=UI[lang]['err_heic_url']; assert h=='https://noclaudkit.com'+HEIC_HREF.format(lp=lp(lang)), f'err_heic_url mismatch in {lang}'
+    return h  # absolute, as in Nathan's JSON (UX review 8a1d857: JSON wins)
 def heic_attrs(lang):
     """jpg-to-pdf only: the UNSUPPORTED_IMAGE card for a .heic/.heif file links to the converter's HEIC -> JPG page in the
     same language (SEO §6, UX review: only there and in the formats FAQ answer). Text from Nathan's keys err_heic_fix
@@ -245,18 +245,23 @@ def md_inline(s):
     s=re.sub(r'\*\*(.+?)\*\*',r'<b>\1</b>',s); s=re.sub(r'`([^`]+)`',r'<code>\1</code>',s)
     return s
 LIBS=None
+# Counsel PASS 20.10 (Sarah; zh proofread by Nathan): the Metadata paragraph is replaced by this exact HTML (ru: only NBSP typography via vis()).
+PRIV_META={
+ 'en':'<p><b>Metadata.</b> The saved PDF is always a new document with no document information (author, title, subject, keywords, creating program, dates) and no XMP metadata. Metadata in JPEG images (EXIF including GPS location, XMP, IPTC, comments) is removed, both from images in your PDF pages and from photos added with &quot;JPG and photos to PDF&quot;; from PNG images only the pixels are kept. Data needed to display the pages is kept and may contain incidental information: for example, embedded fonts (which may include the font author&#x27;s name), ICC colour profiles, and metadata inside JPEG 2000 images and inline images. The text and content of the pages are not changed.</p>',
+ 'ru':'<p><b>Метаданные.</b> Сохранённый PDF всегда создаётся как новый документ: в нём нет сведений о документе (автор, название, тема, ключевые слова, программа, даты) и метаданных XMP. Из JPEG-изображений удаляются метаданные (EXIF, включая GPS-координаты, XMP, IPTC, комментарии) — и из изображений на страницах ваших PDF, и из фото, добавленных через «Фото и JPG в PDF»; из PNG в файл попадают только пиксели. Данные, нужные для отображения страниц, сохраняются и могут содержать служебные сведения: например, встроенные шрифты (в них бывает имя автора шрифта), цветовые профили ICC, а также метаданные внутри изображений JPEG 2000 и встроенных (inline) изображений. Сам текст и содержимое страниц не меняются.</p>',
+ 'zh':'<p><b>元数据。</b>保存的 PDF 始终是一个新文档，不含文档信息（作者、标题、主题、关键词、生成程序、日期），也不含 XMP 元数据。JPEG 图片中的元数据会被删除，包括 EXIF（含 GPS 位置信息）、XMP、IPTC 和注释；这适用于您 PDF 页面中的图片以及通过“JPG 和照片转 PDF”添加的照片。PNG 图片只保留像素数据。显示页面所需的数据会被保留，其中可能包含附带信息，例如嵌入的字体（可能含有字体作者的姓名）、ICC 颜色配置文件，以及 JPEG 2000 图片和内嵌（inline）图片中的元数据。页面的文字和内容不会被更改。</p>'}
+META_HEAD=('**Metadata.**','**Метаданные.**','**元数据。**')
 def privacy_page(lang):
     t=T[lang]; P=PRIV[lang]; libs='pdf-lib, pdf.js' if lang!='zh' else 'pdf-lib、pdf.js'
     paras=[]; fixed=0
     for p in P['privacy'][1:]:
+        if p.startswith(META_HEAD):
+            fixed+=1; paras.append(vis(lang,PRIV_META[lang]).replace(' —',NB+'—') if lang=='ru' else PRIV_META[lang]); continue
         p=p.replace('{pdf-lib, pdf.js}',libs).replace('{pdf-lib、pdf.js}',libs)
         # No offline claim until a service worker ships (spec §7, Lucas §8): the offline sentence is not published.
         p=re.sub(r'\s*(After the page has loaded, the tool also works offline\.|После загрузки страницы инструмент работает и без интернета\.|页面加载完成后，本工具也可离线使用。)','',p)
-        # Images to PDF does not re-encode JPEGs (core strips EXIF/GPS segments); the approved UI line meta_notice states what is true.
-        p,nrep=re.subn(r'(Images added with "Images to PDF" are re-encoded, so their EXIF data \(including GPS location\) is not included\.|Изображения, добавленные через «Изображения в PDF», перекодируются, поэтому их EXIF \(включая GPS-координаты\) в файл не попадает\.|通过“图片转 PDF”添加的图片会重新编码，因此(?:不包含其 EXIF 数据（包括 GPS 位置）|其 EXIF 数据（包括 GPS 位置信息）不会保留在文件中)。)',lambda m:UI[lang]['meta_notice'].replace(NB,' '),p)
-        fixed+=nrep
         paras.append(f'<p>{vis(lang,md_inline(p))}</p>')
-    assert fixed==1, f'privacy {lang}: re-encoding sentence not found (Counsel text changed?)'
+    assert fixed==1, f'privacy {lang}: Metadata paragraph not found (Counsel text changed?)'
     assert not re.search(r're-encoded|перекодируются|重新编码|offline|без интернета|离线',' '.join(paras)), f'privacy {lang}: unverified claim left'
     h1=re.sub(r'\*','',P['privacy'][0]); dh=re.sub(r'\*','',P['disclaimer'][0])
     body=(f'<h1 id="h1">{e(vis(lang,h1))}</h1>\n'+'\n'.join(paras)+f'\n<h2>{e(dh)}</h2>\n'+'\n'.join(f'<p>{vis(lang,md_inline(p))}</p>' for p in P['disclaimer'][1:])+'\n')
@@ -291,7 +296,10 @@ def load_libs():
             rows.append((c[0],c[1],c[2],c[3]))
     libs=[('@local-pdf-tools/core',ver('@local-pdf-tools/core'),'MIT','Copyright (c) 2026 swtormy-agents')]+rows+[
           ('base64-arraybuffer','0.1.5','MIT','Copyright (c) 2012 Niklas von Hertzen'),
-          ('pdfjs-dist (pdf.js)',ver('pdfjs-dist'),'Apache-2.0','Copyright Mozilla Foundation')]
+          ('pdfjs-dist (pdf.js)',ver('pdfjs-dist'),'Apache-2.0','Copyright Mozilla Foundation'),
+          # compiled into build/app.css (QA M4)
+          ('tailwindcss',ver('tailwindcss'),'MIT','Copyright (c) Tailwind Labs, Inc.'),
+          ('daisyui',ver('daisyui'),'MIT','Copyright (c) 2020 Pouya Saadeghi')]
     # embedded notices: every ### section under «Bundled / nested notices», code blocks verbatim (+ the font lists)
     notes=[]
     bund=tp.split('## Bundled / nested notices',1)[1]
@@ -305,6 +313,10 @@ def load_libs():
     texts=[('@local-pdf-tools/core (MIT)',rd('@local-pdf-tools/core/LICENSE')),('pdf-lib (MIT)',rd('pdf-lib/LICENSE.md')),
            ('@pdf-lib/standard-fonts (MIT)',rd('@pdf-lib/standard-fonts/LICENSE.md')),('@pdf-lib/upng (MIT)',rd('@pdf-lib/upng/LICENSE')),
            ('pako (MIT AND Zlib)',rd('pako/LICENSE')),('tslib (0BSD)',rd('tslib/LICENSE.txt'))]+notes
+    # @pdf-lib/standard-fonts README: licence of the original repo it is based on (QA M4), verbatim
+    sf=re.search(r"## Original Repo's License\n\n(.*?)\s*$",rd('@pdf-lib/standard-fonts/README.md'),re.S).group(1).strip()
+    assert 'Christopher Brown' in sf, 'standard-fonts original licence notice changed'
+    texts+=[('@pdf-lib/standard-fonts: original repo licence',sf),('Tailwind CSS (MIT)',rd('tailwindcss/LICENSE')),('daisyUI (MIT)',rd('daisyui/LICENSE'))]
     if len(apache)>1: texts.append(('Apache License 2.0 (pdf-lib stream decoders)',re.search(r'```\n(.*?)\n```',apache[1],re.S).group(1).strip()))
     texts.append(('pdf.js / pdfjs-dist (Apache-2.0)',rd('pdfjs-dist/LICENSE')))
     return {'libs':libs,'texts':texts}

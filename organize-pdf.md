@@ -16,7 +16,7 @@ Yes. Select a page, press Space to pick it up, move it with the arrow keys and p
 
 ### How do I delete pages from a PDF?
 
-Press the delete button on a page, or select it and press Delete. You can undo it for 5 seconds after you delete.
+Press the delete button on a page, or select it and press Delete. You can undo it for 10 seconds after you delete.
 
 ### How do I rotate PDF pages?
 

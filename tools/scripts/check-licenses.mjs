@@ -17,14 +17,15 @@ for (const [entry, format] of [['src/app.js', 'esm'], ['src/worker.js', 'iife']]
   }
 }
 const embedded = ['base64-arraybuffer']; // inlined inside pdf-lib / standard-fonts, no own package
+const css = ['tailwindcss', 'daisyui']; // compiled into build/app.css
 let ok = true;
 for (const p of ['licenses.html', 'ru/licenses.html', 'zh/licenses.html']) {
   const s = readFileSync(join(tools, '..', p), 'utf8');
   const listed = new Set([...s.matchAll(/<tr><td translate="no">([^<]+)<\/td>/g)].map((m) => m[1].replace(' (pdf.js)', '')));
-  const want = new Set([...pkgs, ...embedded]);
+  const want = new Set([...pkgs, ...embedded, ...css]);
   for (const x of want) if (!listed.has(x)) { console.error(`FAIL ${p}: bundled ${x} not listed`); ok = false; }
   for (const x of listed) if (!want.has(x)) { console.error(`FAIL ${p}: ${x} listed but not bundled`); ok = false; }
-  for (const needle of ['Niklas von Hertzen', 'Jean-loup Gailly and Mark Adler', 'Copyright 2012 Mozilla Foundation', 'Glyph &amp; Cog, LLC', 'Devon Govett', 'Adobe Systems Incorporated', 'Apache License']) {
+  for (const needle of ['Niklas von Hertzen', 'Jean-loup Gailly and Mark Adler', 'Copyright 2012 Mozilla Foundation', 'Glyph &amp; Cog, LLC', 'Devon Govett', 'Adobe Systems Incorporated', 'Apache License', 'Christopher Brown', 'Tailwind Labs, Inc.', 'Pouya Saadeghi']) {
     if (!s.includes(needle)) { console.error(`FAIL ${p}: notice "${needle}" missing`); ok = false; }
   }
 }

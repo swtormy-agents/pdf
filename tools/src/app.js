@@ -432,31 +432,60 @@ function init() {
     announce(t('aria_live_rotated', { n: pages.indexOf(p) + 1, deg: p.r }));
   }
   let undoTimer = null;
+  const UNDO_MS = 10000; // founder decision 21.10: 10 s as in the FAQ; paused while Undo has focus or hover (WCAG 2.2.1)
+  let undoNow = null; // Undo of the visible toast, for Ctrl/Cmd+Z
   function del(k) {
     const idx = pages.findIndex((p) => p.k === k); if (idx < 0) return;
     const [p] = pages.splice(idx, 1);
     const nextK = (pages[idx] || pages[idx - 1] || {}).k;
     render();
-    showUndo(p, idx);
-    if (nextK) { setRoving(nextK); nodes.get(nextK).querySelector('[data-act=del]').focus(); } else (addBtn || input).focus();
+    const u = showUndo(p, idx);
+    if (nextK) {
+      // focus stays in the grid (serial deleting); the next Tab from here reaches Undo, which sits right after the grid
+      setRoving(nextK); const d = nodes.get(nextK).querySelector('[data-act=del]'); d.focus();
+      const toUndo = (ev) => { if (ev.key === 'Tab' && !ev.shiftKey && !toast.hidden && u.isConnected) { ev.preventDefault(); u.focus(); } };
+      d.addEventListener('keydown', toUndo); d.addEventListener('blur', () => d.removeEventListener('keydown', toUndo), { once: true });
+    } else u.focus(); // last page deleted (QA M1): Undo, or the file input once the toast is gone
   }
   function showUndo(p, idx) {
     clearTimeout(undoTimer);
     toast.textContent = '';
+    // DOM right after the page grid (or after #work once it is hidden) so it is next in tab order; the toast stays fixed on screen
+    (work.hidden ? work : list).after(toast);
+    const hold = { focus: false, hover: false };
+    const close = () => {
+      clearTimeout(undoTimer); undoNow = null; const had = toast.contains(document.activeElement);
+      toast.hidden = true; toast.textContent = ''; dropFileIfUnused();
+      if (had || document.activeElement === document.body) { if (roving && nodes.get(roving) && !work.hidden) focusPage(roving); else input.focus(); }
+    };
+    const arm = () => { clearTimeout(undoTimer); if (!hold.focus && !hold.hover) undoTimer = setTimeout(close, UNDO_MS); };
     const a = el('div', 'alert');
     const msg = el('span', '', t('toast_deleted', { n: idx + 1 }));
     const u = el('button', 'btn btn-sm btn-primary min-h-11', t('undo')); u.type = 'button';
-    u.addEventListener('click', () => {
-      clearTimeout(undoTimer); toast.hidden = true;
+    const undo = () => {
+      clearTimeout(undoTimer); undoNow = null; toast.hidden = true; toast.textContent = '';
       const at = Math.min(idx, pages.length);
       pages.splice(at, 0, p);
       render(); focusCard(p.k);
       announce(t('org_restored', { n: at + 1 }));
-    });
+    };
+    u.addEventListener('click', undo); undoNow = undo;
+    // the auto-dismiss timer pauses while Undo has focus or hover; Esc closes the toast
+    u.addEventListener('focus', () => { hold.focus = true; arm(); });
+    u.addEventListener('blur', () => { hold.focus = false; if (!toast.hidden) arm(); });
+    u.addEventListener('mouseenter', () => { hold.hover = true; arm(); });
+    u.addEventListener('mouseleave', () => { hold.hover = false; if (!toast.hidden) arm(); });
+    u.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); close(); } });
     a.append(msg, u); toast.appendChild(a); toast.hidden = false;
     announce(t('toast_deleted', { n: idx + 1 }));
-    undoTimer = setTimeout(() => { toast.hidden = true; toast.textContent = ''; dropFileIfUnused(); }, 5000);
+    arm();
+    return u;
   }
+  document.addEventListener('keydown', (ev) => {
+    if (!undoNow || toast.hidden || ev.shiftKey || ev.altKey || !(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== 'z') return;
+    if (ev.target.closest && ev.target.closest('input[type=text], input:not([type]), textarea, [contenteditable]')) return;
+    ev.preventDefault(); undoNow();
+  });
   function dropFileIfUnused() { files = files.filter((f) => pages.some((p) => p.f === f.id)); render(); }
 
   list.addEventListener('click', (e) => {
@@ -680,9 +709,10 @@ function init() {
       const k = 'err_' + over.toLowerCase(); rerr.textContent = t(k) + ' · ' + t(k + '_fix');
     } else if (!tooMany) delete rerr.dataset.code;
     rangesIn.setAttribute('aria-describedby', rerr.hidden ? 'rhint' : 'rhint rerr');
-    // #rerr moves between blocks and is cleared on every render; #rlive never moves and is never cleared (Olivia 6)
+    // #rerr moves between blocks and is cleared on every render; #rlive never moves (Olivia 6) and is emptied once the error is resolved (QA L3)
     const emsg = rerr.hidden ? '' : rerr.textContent;
     if (emsg && emsg !== lastErr) rlive.textContent = rlive.textContent === emsg ? emsg + NB : emsg;
+    else if (!emsg && rlive.textContent) rlive.textContent = '';
     lastErr = emsg;
     go.disabled = !splitPlan || busy;
   }
@@ -759,7 +789,7 @@ function init() {
     } finally { setBusy(false); hideProc(); render(); if (!done.hidden) work.hidden = true; }
   }
   function flash(msg) {
-    clearTimeout(undoTimer); toast.textContent = '';
+    clearTimeout(undoTimer); undoNow = null; toast.textContent = '';
     const a = el('div', 'alert', msg); toast.appendChild(a); toast.hidden = false;
     undoTimer = setTimeout(() => { toast.hidden = true; toast.textContent = ''; }, 5000);
   }
