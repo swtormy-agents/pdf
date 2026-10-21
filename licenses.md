@@ -1,12 +1,12 @@
-# Licences and attributions
+# Licenses and attributions
 
 HTML version: https://noclaudkit.com/pdf/licenses.html
 
-Local PDF Tools is MIT-licensed. Third-party components and their licences are listed below.
+Local PDF Tools is MIT-licensed. Third-party components and their licenses are listed below.
 
 ## Bundled libraries
 
-| Package | Version | Licence |
+| Package | Version | License |
 |---|---|---|
 | @local-pdf-tools/core | 0.1.0 | MIT |
 | pdf-lib | 1.17.1 | MIT (embeds Apache-2.0 and MIT code, see below) |
@@ -17,4 +17,4 @@ Local PDF Tools is MIT-licensed. Third-party components and their licences are l
 | base64-arraybuffer | 0.1.5 | MIT |
 | pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 |
 
-Full licence texts: https://noclaudkit.com/pdf/licenses.html
+Full license texts: https://noclaudkit.com/pdf/licenses.html

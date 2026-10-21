@@ -375,8 +375,10 @@ print(len(pages),'pages,',len(SM),'sitemap URLs')
 # (converter convention). Output goes through the same BANNED check; any hit fails the build.
 def gen_llms():
     t=T['en']; S=SEO['en']; F=FAQ['en']
+    INTRO='Files are processed in your browser and never leave your device. Free and open source: no uploads, no cookies, no ads.'  # Nathan-approved; BANNED-checked via w()
     md_url=lambda p:BASE+p[:-5]+'.md'
     def w(path,s):
+        s=re.sub(r'([Ll])icence',r'\1icense',s)  # US spelling in generated agent docs (Nathan)
         chk=s.replace('are not unlocked','')  # same Counsel exemption as check_page
         m=BANNED.search(chk); assert not m, f'banned word {m.group(0)!r} in {path}'
         assert NB not in s and '\u2011' not in s, f'non-plain space/hyphen in {path}'
@@ -405,7 +407,7 @@ def gen_llms():
          f'| {t["lic_col_pkg"]} | {t["lic_col_ver"]} | {t["lic_col_lic"]} |\n|---|---|---|\n'+''.join(f'| {n} | {v} | {l} |\n' for n,v,l,_ in LIBS['libs'])
          +f'\nFull licence texts: {url("en","licenses.html")}\n')
     files['licenses.md']=lic
-    txt=(f'# Local PDF Tools\n\n> {plain(S["hub"]["meta"])}\n\n{plain(t["lede"])} {plain(t["foot"])}\n\n'
+    txt=(f'# Local PDF Tools\n\n> {plain(S["hub"]["meta"])}\n\n{INTRO}\n\n'
          f'## Tools\n\n'+tools_md()+
          f'\n## Docs\n\n- [{plain(t["h1_home"])}]({md_url("index.html")})\n'+''.join(f'- [{plain(S[k]["h1"])}]({md_url(p)})\n' for p,k,_ in TOOLS[1:])
          +f'- [{t["f_priv"]}]({md_url("privacy.html")})\n- [{t["f_lic"]}]({md_url("licenses.html")})\n'
