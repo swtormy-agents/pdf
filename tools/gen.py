@@ -86,7 +86,7 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
     def li(l):
         cur=l==lang
         tail=CHECK if cur else (f'<span class="ms-auto text-xs text-base-content/70">{LANG_CODE[l]}</span>' if LANG_CODE[l] else '')
-        return (f'<li><a class="min-h-11'+(' menu-active' if cur else '')+f'" href="{ROOT}{lp(l)}{"" if page=="index.html" else page}" hreflang="{HREFLANG[l]}" lang="{HREFLANG[l]}"'
+        return (f'<li><a class="min-h-[44px] items-center'+(' menu-active' if cur else '')+f'" href="{ROOT}{lp(l)}{"" if page=="index.html" else page}" hreflang="{HREFLANG[l]}" lang="{HREFLANG[l]}"'
                 +(' aria-current="page"' if cur else '')+f'>{e(LANG_NAME[l])}{" "+tail if tail else ""}</a></li>')
     radios=''.join(f'<input class="join-item btn btn-ghost flex-1 min-h-11 theme-opt" type="radio" name="theme" value="{v}" aria-label="{e(t[v])}" title="{e(t[v])}"'+(' checked' if v=='system' else '')+'>' for v in ('system','light','dark'))
     aria=''.join(f' data-l-{k}="{e(t["settings_aria_"+k])}"' for k in ('system','light','dark','mobile'))
@@ -177,8 +177,8 @@ def app(lang,mode,hub=False):
 HEIC_HREF='/image-converter/{lp}heic-to-jpg.html'  # verified in swtormy-agents/image-converter main: heic-to-jpg.html, ru/, zh/
 def heic_href(lang):
     """Nathan's err_heic_url must point at the same converter page; it is emitted as a same-site path."""
-    h=HEIC_HREF.format(lp=lp(lang)); assert UI[lang]['err_heic_url']=='https://noclaudkit.com'+h, f'err_heic_url mismatch in {lang}'
-    return h
+    h=UI[lang]['err_heic_url']; assert h=='https://noclaudkit.com'+HEIC_HREF.format(lp=lp(lang)), f'err_heic_url mismatch in {lang}'
+    return h  # absolute, as in Nathan's JSON (UX review 8a1d857: JSON wins)
 def heic_attrs(lang):
     """jpg-to-pdf only: the UNSUPPORTED_IMAGE card for a .heic/.heif file links to the converter's HEIC -> JPG page in the
     same language (SEO §6, UX review: only there and in the formats FAQ answer). Text from Nathan's keys err_heic_fix
@@ -296,7 +296,10 @@ def load_libs():
             rows.append((c[0],c[1],c[2],c[3]))
     libs=[('@local-pdf-tools/core',ver('@local-pdf-tools/core'),'MIT','Copyright (c) 2026 swtormy-agents')]+rows+[
           ('base64-arraybuffer','0.1.5','MIT','Copyright (c) 2012 Niklas von Hertzen'),
-          ('pdfjs-dist (pdf.js)',ver('pdfjs-dist'),'Apache-2.0','Copyright Mozilla Foundation')]
+          ('pdfjs-dist (pdf.js)',ver('pdfjs-dist'),'Apache-2.0','Copyright Mozilla Foundation'),
+          # compiled into build/app.css (QA M4)
+          ('tailwindcss',ver('tailwindcss'),'MIT','Copyright (c) Tailwind Labs, Inc.'),
+          ('daisyui',ver('daisyui'),'MIT','Copyright (c) 2020 Pouya Saadeghi')]
     # embedded notices: every ### section under «Bundled / nested notices», code blocks verbatim (+ the font lists)
     notes=[]
     bund=tp.split('## Bundled / nested notices',1)[1]
@@ -310,6 +313,10 @@ def load_libs():
     texts=[('@local-pdf-tools/core (MIT)',rd('@local-pdf-tools/core/LICENSE')),('pdf-lib (MIT)',rd('pdf-lib/LICENSE.md')),
            ('@pdf-lib/standard-fonts (MIT)',rd('@pdf-lib/standard-fonts/LICENSE.md')),('@pdf-lib/upng (MIT)',rd('@pdf-lib/upng/LICENSE')),
            ('pako (MIT AND Zlib)',rd('pako/LICENSE')),('tslib (0BSD)',rd('tslib/LICENSE.txt'))]+notes
+    # @pdf-lib/standard-fonts README: licence of the original repo it is based on (QA M4), verbatim
+    sf=re.search(r"## Original Repo's License\n\n(.*?)\s*$",rd('@pdf-lib/standard-fonts/README.md'),re.S).group(1).strip()
+    assert 'Christopher Brown' in sf, 'standard-fonts original licence notice changed'
+    texts+=[('@pdf-lib/standard-fonts: original repo licence',sf),('Tailwind CSS (MIT)',rd('tailwindcss/LICENSE')),('daisyUI (MIT)',rd('daisyui/LICENSE'))]
     if len(apache)>1: texts.append(('Apache License 2.0 (pdf-lib stream decoders)',re.search(r'```\n(.*?)\n```',apache[1],re.S).group(1).strip()))
     texts.append(('pdf.js / pdfjs-dist (Apache-2.0)',rd('pdfjs-dist/LICENSE')))
     return {'libs':libs,'texts':texts}

@@ -53,7 +53,15 @@ def main():
     for l in LANGS: dump(f'{l}.json',json.load(open(f'{I18N}/{l}.json',encoding='utf-8')))
     seo=json.load(open(f'{I18N}/seo/seo-ru-zh.json',encoding='utf-8')); seo['en']=seo_en(f'{W}/seo/pdf-tool-keywords-structure.md')
     dump('seo.json',{l:seo[l] for l in LANGS})
-    dump('faq.json',{'en':faq(f'{W}/seo/pdf-tool-faq-en.md','Q:','A:'),'ru':faq(f'{I18N}/faq/faq-ru.md','В:','О:'),'zh':faq(f'{I18N}/faq/faq-zh.md','问：','答：')})
+    F={'en':faq(f'{W}/seo/pdf-tool-faq-en.md','Q:','A:'),'ru':faq(f'{I18N}/faq/faq-ru.md','В:','О:'),'zh':faq(f'{I18N}/faq/faq-zh.md','问：','答：')}
+    # founder decision 21.10: Undo lasts 10 s. Until Nathan's ru/zh sources say 10, only the number is changed here
+    # ("5 секунд" -> "10 секунд": same genitive plural; "5 秒内" -> "10 秒内"). No-op once the sources are updated.
+    for l,old,new in (('ru','В течение 5 секунд','В течение 10 секунд'),('zh','删除后 5 秒内','删除后 10 秒内')):
+        for x in F[l]['organize']:
+            if old in x['a']: x['a']=x['a'].replace(old,new)
+        assert sum(new in x['a'] for x in F[l]['organize'])==1, f'organize undo time not found in faq-{l}'
+    assert any('10 seconds' in x['a'] for x in F['en']['organize'])
+    dump('faq.json',F)
     dump('privacy.json',privacy(f'{W}/company/legal/pdf-privacy-disclaimer.md'))
     # pair_h1: the converter's H1 pattern for its pair pages, used as the anchor of the jpg-to-pdf -> heic-to-jpg link
     keys=['lang_code','lang_nav','theme','system','light','dark','settings_aria_system','settings_aria_light','settings_aria_dark','settings_aria_mobile','legal','pair_h1']
