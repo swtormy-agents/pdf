@@ -246,7 +246,7 @@ async def run(bname, p, tmp):
     ok(pre + 'split limit ru: part text', 'В одном файле больше 1000 страниц' in tx, tx)
     await pg.close()
 
-    # ---- split: core errors carry details.limit ('part' | 'total' | 'parts', core ea16ac5) -> the matching split card ----
+    # ---- split: core errors carry details.limit ('part' | 'total' | 'parts', core 047da26) -> the matching split card ----
     real_w = open(os.path.join(HERE, '..', '..', 'assets', 'worker.js')).read()
     for limit, ccode, code in (('part', 'TOO_MANY_PAGES', 'SPLIT_PART_PAGES'), ('total', 'TOO_MANY_PAGES', 'SPLIT_TOTAL_PAGES'), ('parts', 'TOO_MANY_FILES', 'SPLIT_PARTS')):
         shim2 = real_w + """
@@ -307,6 +307,22 @@ async def run(bname, p, tmp):
         ok(pre + f'organize {wd}: delete focuses the neighbour delete button, Undo focuses the restored card + org_restored',
            f1 == ['del', 1] and f2[0] == 'BUTTON' and f2[1] == 1 and f2[2] and lv == 'Page 2 restored', (f1, f2, lv))
         await pg.close()
+
+    # ---- organize 375 (<600, .pick display:contents): Esc on Undo and timer close focus a card, not body (Olivia UX FAIL b458eda) ----
+    pg = await newpage(ctx, 375, 800); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'organize-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'contract.pdf']); await loaded(pg)
+    FOC = "(() => { const a = document.activeElement; return [a.tagName, !!a.closest('#pages > .pc'), a.getClientRects().length > 0]; })()"
+    await pg.locator('#pages > .pc').nth(1).locator('[data-act=del]').click()
+    await pg.keyboard.press('Tab'); intoast = await pg.evaluate("!!document.activeElement.closest('#toast')")
+    await pg.keyboard.press('Escape'); await pg.wait_for_timeout(120)
+    fe = await pg.evaluate(FOC); he = await pg.is_visible('#toast')
+    ok(pre + 'organize 375: Esc on Undo closes the toast and focuses a card (not body)', intoast and not he and fe[0] != 'BODY' and fe[1] and fe[2], (intoast, he, fe))
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click(); await pg.mouse.move(1, 1)
+    await pg.evaluate("document.activeElement.blur()"); await pg.wait_for_timeout(10800)
+    ft = await pg.evaluate(FOC); ht = await pg.is_visible('#toast')
+    ok(pre + 'organize 375: timer close focuses a card (not body)', not ht and ft[0] != 'BODY' and ft[1] and ft[2], (ht, ft))
+    await pg.close()
 
     # ---- Undo toast (v1 scope 3): DOM after the grid, Tab reaches it, 10 s, paused on focus/hover, Ctrl/Cmd+Z, last page -> Undo ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)

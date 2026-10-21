@@ -456,7 +456,7 @@ function init() {
     const close = () => {
       clearTimeout(undoTimer); undoNow = null; const had = toast.contains(document.activeElement);
       toast.hidden = true; toast.textContent = ''; dropFileIfUnused();
-      if (had || document.activeElement === document.body) { if (roving && nodes.get(roving) && !work.hidden) focusPage(roving); else input.focus(); }
+      if (had || document.activeElement === document.body) { if (roving && nodes.get(roving) && !work.hidden) focusCard(roving); else input.focus(); } // focusCard: .pick has no box below 600px (Olivia UX b458eda)
     };
     const arm = () => { clearTimeout(undoTimer); if (!hold.focus && !hold.hover) undoTimer = setTimeout(close, UNDO_MS); };
     const a = el('div', 'alert');
@@ -651,7 +651,7 @@ function init() {
     return null;
   }
   // core TOO_MANY_PAGES / TOO_MANY_FILES during split -> one of the three split cards, chosen by the core's
-  // details.limit ('part' | 'total' | 'parts'); core ea16ac5 always sets it.
+  // details.limit ('part' | 'total' | 'parts'); core 047da26 always sets it.
   const SPLIT_ERR = { part: 'SPLIT_PART_PAGES', total: 'SPLIT_TOTAL_PAGES', parts: 'SPLIT_PARTS' };
   function splitErrCode(e) {
     const d = (e && e.details) || {};
@@ -675,7 +675,7 @@ function init() {
       const v = rangesIn.value.replace(/\u2014/g, '-');
       if (v.trim()) {
         try {
-          // cap = the split total (5000): core ea16ac5 stops a long or duplicated spec with TOO_MANY_PAGES as soon as the
+          // cap = the split total (5000): core 047da26 stops a long or duplicated spec with TOO_MANY_PAGES as soon as the
           // running total passes it -> err_split_total_pages; per-part / parts limits are checked below with the real plan
           const g = parsePageRanges(v, f.pages, SPLIT.total).map((x) => [x[0] + 1, x[x.length - 1] + 1]);
           splitPlan = { groups: g, total: g.reduce((s, [a, b]) => s + b - a + 1, 0) };
