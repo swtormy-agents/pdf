@@ -30,6 +30,16 @@ async function mergeTagged(items) {
   try { return await merge(items.map(({ bytes, pages }) => (pages ? { bytes, pages } : { bytes }))); } catch (e) {
     const it = e instanceof PdfToolError && e.details && Number.isInteger(e.details.index) ? items[e.details.index] : null;
     if (it && it.f !== undefined) e.details = { ...e.details, fileId: it.f };
+    else if (e instanceof PdfToolError && !(e.details && e.details.fileId !== undefined) && items.length > 1) {
+      // QA M1 (398ade0): some core errors raised during assembly (e.g. PDF_INVALID reason 'refchain') carry no input
+      // index. Find the failing input by merging each source run alone, so the UI names the file (not generic FAILED).
+      for (const x of items) {
+        if (x.f === undefined) continue;
+        try { await merge([x.pages ? { bytes: x.bytes, pages: x.pages } : { bytes: x.bytes }]); } catch (e2) {
+          if (e2 instanceof PdfToolError && e2.code === e.code) { e.details = { ...(e.details || {}), fileId: x.f }; break; }
+        }
+      }
+    }
     throw e;
   }
 }

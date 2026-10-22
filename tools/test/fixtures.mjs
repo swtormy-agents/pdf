@@ -21,3 +21,19 @@ w('broken.jpg', new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 
 for (let k = 1; k <= 51; k++) w(`m${String(k).padStart(2, '0')}.pdf`, await sized(500, 1));
 w('notes.txt', new TextEncoder().encode('hello'));
 console.log('fixtures in', d);
+
+// QA M1 (398ade0): page image XObject behind a 40-hop indirect reference chain (core fails closed: PDF_INVALID refchain
+// during assembly, not at open)
+{
+  const objs = { 1: '<< /Type /Catalog /Pages 2 0 R >>', 2: '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    3: '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << /XObject << /Im0 10 0 R >> >> /Contents 4 0 R >>',
+    4: '<< /Length 31 >>\nstream\nq 100 0 0 50 10 10 cm /Im0 Do Q\nendstream' };
+  for (let k = 10; k < 50; k++) objs[k] = `${k + 1} 0 R`;
+  objs[50] = '<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceGray /BitsPerComponent 8 /Length 4 >>\nstream\n\x00\x40\x80\xff\nendstream';
+  let out = '%PDF-1.7\n'; const off = {};
+  for (const n of Object.keys(objs).map(Number)) { off[n] = Buffer.byteLength(out, 'latin1'); out += `${n} 0 obj\n${objs[n]}\nendobj\n`; }
+  const x = Buffer.byteLength(out, 'latin1'); out += 'xref\n0 51\n';
+  for (let n = 0; n <= 50; n++) out += off[n] !== undefined ? String(off[n]).padStart(10, '0') + ' 00000 n \n' : '0000000000 65535 f \n';
+  out += `trailer\n<< /Size 51 /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  w('refchain40.pdf', Buffer.from(out, 'latin1'));
+}
