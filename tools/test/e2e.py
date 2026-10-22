@@ -557,6 +557,21 @@ async def run(bname, p, tmp):
     ok(pre + 'images A4: pages 595x842, no EXIF/GPS', all((x['w'], x['h']) == (595, 842) for x in v['pages']) and not v['exif'], v['pages'])
     await pg.close()
 
+    # ---- 50 MP header limit (IMAGE_TOO_LARGE), en/ru/zh error cards ----
+    for l in ('en', 'ru', 'zh'):
+        pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + ('' if l == 'en' else l + '/') + 'jpg-to-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + x for x in ('edge-50mp.jpg', 'over-50mp.jpg', 'sneaky-sof.jpg', 'over-50mp.png', 'dup-ihdr.png', 'plain.png')]); await loaded(pg)
+        codes = await pg.eval_on_selector_all('#errs .ecard', 'e => e.map(x => x.dataset.code)')
+        tx = (await pg.inner_text('#errs')).replace('\xa0', ' ')
+        want = [src[l]['err_image_too_large'].replace('{file}', n).replace('\xa0', ' ') for n in ('over-50mp.jpg', 'sneaky-sof.jpg', 'over-50mp.png')]
+        fix = src[l]['err_image_too_large_fix'].replace('\xa0', ' ')
+        n = await pg.locator('#pages > .pc').count()
+        ok(pre + f'50 MP {l}: 50,000,000 px added, 50,000,001 px / 2nd SOF / PNG over -> IMAGE_TOO_LARGE cards, dup IHDR -> IMAGE_INVALID',
+           codes == ['IMAGE_TOO_LARGE', 'IMAGE_TOO_LARGE', 'IMAGE_TOO_LARGE', 'IMAGE_INVALID'] and all(x in tx for x in want) and tx.count(fix) == 3 and n == 2, (codes, n, tx))
+        if l == 'en': await pg.screenshot(path=f'{SHOTS}/{bname}-09-image-50mp-en-1280.png', full_page=True)
+        await pg.close()
+
     # ---- cancel during processing (big job) ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
     await pg.goto(B + 'merge-pdf.html'); await ready(pg)
