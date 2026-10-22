@@ -1,0 +1,362 @@
+{
+ "en": {
+  "hub": [
+   {
+    "q": "What can I do with Local PDF Tools?",
+    "a": "You can merge PDF files, split a PDF, reorder, rotate or delete pages, and turn JPG and PNG images into a PDF. Everything runs in your browser."
+   },
+   {
+    "q": "Are my files uploaded to a server?",
+    "a": "No. Your files are processed on your device and are not uploaded. You can check it yourself: open your browser's developer tools, go to the Network tab, and you will see that your file is not sent anywhere while it is processed."
+   },
+   {
+    "q": "Is Local PDF Tools free? Do I need an account?",
+    "a": "Yes, it is free. There is no sign-up, and no watermark is added to your files."
+   },
+   {
+    "q": "Are there limits on file size or number of files?",
+    "a": "The current limits are up to 100 MB per file, 300 MB in total and up to 50 files at once. The result can have up to 1000 pages, and each image in Images to PDF can be up to 50 megapixels."
+   },
+   {
+    "q": "Can I use password-protected PDFs?",
+    "a": "No. The tool does not open password-protected or encrypted PDFs and shows a clear message instead. Remove the password in the app where you have it, then add the file again."
+   },
+   {
+    "q": "What is Local PDF Tools built with?",
+    "a": "It uses open-source libraries, including pdf-lib (MIT license) to create the PDF files and pdf.js (Apache-2.0 license) to show page previews. Both are served from our own site, with no third-party scripts and no cookies."
+   }
+  ],
+  "merge": [
+   {
+    "q": "How do I merge PDF files?",
+    "a": "Choose your PDF files or drop them on the page. Arrange the pages in the order you want, press Merge and download the combined PDF."
+   },
+   {
+    "q": "Can I change the order before I merge PDFs?",
+    "a": "Yes. Drag a page to a new place, or use the move buttons on each page. You can also rotate or delete pages before you merge."
+   },
+   {
+    "q": "How many PDF files can I merge at once?",
+    "a": "You can currently merge up to 50 PDF files, up to 100 MB each and 300 MB in total. The merged PDF can have up to 1000 pages."
+   },
+   {
+    "q": "Does merging PDF files reduce quality?",
+    "a": "No. Page text and images are copied into the new file without re-encoding, so they keep their quality. Interactive parts are removed: form fields (including anything typed into them), attachments and JavaScript."
+   },
+   {
+    "q": "Are forms, links and attachments kept when I merge PDFs?",
+    "a": "Web and email links are kept; links that jump to another page inside the document and comments are removed. Form fields and the values typed into them, attachments and JavaScript are not copied, so forms are not preserved. Document details such as Author, Creator, Producer and XMP metadata are not carried over either."
+   }
+  ],
+  "split": [
+   {
+    "q": "How do I split a PDF into separate files?",
+    "a": "Add your PDF and choose \"By ranges\" or \"Every N pages\". Press Split, and the files download together in one ZIP."
+   },
+   {
+    "q": "How do I extract a single page or a page range from a PDF?",
+    "a": "Choose \"Extract pages\" and select the pages you need on the previews; they are saved as one new PDF. You can also type a single page, like 5, or a range, like 2-4, under \"By ranges\"."
+   },
+   {
+    "q": "How do I enter page ranges to split a PDF?",
+    "a": "Separate pages with commas and write ranges with a hyphen, for example 1-3, 5, 8-10. That example makes three files, and the tool shows the result before you split."
+   },
+   {
+    "q": "Can I split a confidential PDF without uploading it?",
+    "a": "Yes. The PDF is split in your browser on your device and is never sent to a server."
+   },
+   {
+    "q": "Does a split PDF keep the original metadata?",
+    "a": "No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Data needed to display the pages, for example fonts, ICC profiles, and JPEG 2000 or inline images, is kept as is. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed."
+   }
+  ],
+  "organize": [
+   {
+    "q": "How do I reorder PDF pages?",
+    "a": "Add your PDF and drag the pages into the order you want, or use the move buttons on each page. Then save the PDF with the new page order."
+   },
+   {
+    "q": "Can I rearrange PDF pages with the keyboard?",
+    "a": "Yes. Select a page, press Space to pick it up, move it with the arrow keys and press Space again to drop it. Press Esc to cancel a move."
+   },
+   {
+    "q": "How do I delete pages from a PDF?",
+    "a": "Press the delete button on a page, or select it and press Delete. You can undo it for 10 seconds after you delete."
+   },
+   {
+    "q": "How do I rotate PDF pages?",
+    "a": "Press the rotate button on a page, or select it and press R. Each press turns the page 90 degrees clockwise, and the rotation is saved in the file."
+   },
+   {
+    "q": "Will reordering PDF pages change their quality?",
+    "a": "No. Page text and images are moved into the new file without re-encoding. Form fields (including anything typed into them), attachments, JavaScript and document metadata are not carried over, so keep the original if you need the form."
+   }
+  ],
+  "jpg": [
+   {
+    "q": "How do I convert JPG to PDF?",
+    "a": "Choose your JPG or PNG images or drop them on the page. Set the order and page size, press Create PDF and download the file."
+   },
+   {
+    "q": "Which image formats can I convert to PDF?",
+    "a": "You can convert JPG and PNG images. Each image can be up to 50 megapixels. If your photos are in HEIC format, convert them to JPG first with our HEIC to JPG converter."
+   },
+   {
+    "q": "Can I combine several JPG images into one PDF?",
+    "a": "Yes. Add up to 50 images at once, drag them or use the move buttons to set the order, and they become pages of one PDF."
+   },
+   {
+    "q": "What page size does the JPG to PDF converter use?",
+    "a": "You can choose A4 or make each page match the size of its image."
+   },
+   {
+    "q": "Does converting JPG to PDF reduce image quality?",
+    "a": "No. JPG images are placed in the PDF without re-compression, and PNG images are stored losslessly, so quality stays the same."
+   },
+   {
+    "q": "Is location data from my photos kept in the PDF?",
+    "a": "No. EXIF data and GPS location are removed from the photos before they go into the PDF."
+   }
+  ]
+ },
+ "ru": {
+  "hub": [
+   {
+    "q": "Что умеет Local PDF Tools?",
+    "a": "Объединять PDF-файлы, разделять PDF, переставлять, поворачивать и удалять страницы, а также собирать PDF из изображений JPG и PNG. Всё работает прямо в браузере."
+   },
+   {
+    "q": "Файлы загружаются на сервер?",
+    "a": "Нет. Файлы обрабатываются на вашем устройстве и не отправляются на сервер. Это легко проверить: откройте инструменты разработчика в браузере, перейдите на вкладку «Сеть» (Network) — вы увидите, что во время обработки файл никуда не отправляется."
+   },
+   {
+    "q": "Это бесплатно? Нужна регистрация?",
+    "a": "Да, бесплатно. Регистрация не нужна, водяные знаки на файлы не добавляются."
+   },
+   {
+    "q": "Есть ли ограничения по размеру и количеству файлов?",
+    "a": "Сейчас можно добавить до 50 файлов за раз: до 100 МБ каждый и до 300 МБ всего. В итоговом PDF может быть до 1000 страниц, а каждое изображение в режиме «Изображения в PDF» — до 50 мегапикселей."
+   },
+   {
+    "q": "Можно ли работать с PDF, защищёнными паролем?",
+    "a": "Нет. Защищённые паролем или зашифрованные PDF не открываются: вместо этого появится понятное сообщение. Снимите пароль в программе, где он у вас есть, и добавьте файл снова."
+   },
+   {
+    "q": "На чём сделан Local PDF Tools?",
+    "a": "На библиотеках с открытым кодом. Среди них pdf-lib (лицензия MIT), которая создаёт PDF-файлы, и pdf.js (лицензия Apache-2.0), которая показывает миниатюры страниц. Обе подключаются с нашего же сайта, без сторонних скриптов и без cookie."
+   }
+  ],
+  "merge": [
+   {
+    "q": "Как объединить PDF-файлы?",
+    "a": "Выберите PDF-файлы или перетащите их на страницу. Расставьте страницы в нужном порядке, нажмите «Объединить» и скачайте готовый PDF."
+   },
+   {
+    "q": "Можно ли поменять порядок перед объединением?",
+    "a": "Да. Перетащите страницу на новое место или воспользуйтесь кнопками перемещения на самой странице. Перед объединением страницы можно также повернуть или удалить."
+   },
+   {
+    "q": "Сколько PDF-файлов можно объединить за раз?",
+    "a": "Сейчас — до 50 PDF-файлов, до 100 МБ каждый и до 300 МБ всего. В объединённом PDF может быть до 1000 страниц."
+   },
+   {
+    "q": "Ухудшается ли качество при объединении PDF?",
+    "a": "Нет. Текст и изображения страниц копируются в новый файл без перекодирования, поэтому качество не меняется. Интерактивные элементы удаляются: поля форм (вместе со всем, что в них введено), вложения и JavaScript."
+   },
+   {
+    "q": "Сохраняются ли формы, ссылки и вложения при объединении?",
+    "a": "Ссылки на сайты и адреса электронной почты сохраняются, а ссылки на другие страницы внутри документа и комментарии удаляются. Поля форм и введённые в них значения, вложения и JavaScript не копируются, поэтому формы не сохраняются. Свойства документа (автор, программа создания, производитель PDF) и метаданные XMP тоже не переносятся."
+   }
+  ],
+  "split": [
+   {
+    "q": "Как разделить PDF на отдельные файлы?",
+    "a": "Добавьте PDF и выберите «По диапазонам» или «Каждые N страниц». Нажмите «Разделить» — файлы скачаются вместе одним ZIP-архивом."
+   },
+   {
+    "q": "Как извлечь из PDF одну страницу или несколько подряд?",
+    "a": "Выберите «Извлечь страницы» и отметьте нужные страницы на миниатюрах — они сохранятся в один новый PDF. Можно и в режиме «По диапазонам» указать одну страницу, например 5, или диапазон, например 2-4."
+   },
+   {
+    "q": "Как указать диапазоны страниц для разделения?",
+    "a": "Перечислите страницы через запятую, а диапазоны укажите через дефис, например: 1-3, 5, 8-10. Из этого примера получится три файла, а результат будет виден ещё до разделения."
+   },
+   {
+    "q": "Можно ли разделить конфиденциальный PDF, не загружая его?",
+    "a": "Да. PDF разделяется в браузере на вашем устройстве и никуда не отправляется."
+   },
+   {
+    "q": "Сохраняются ли метаданные исходного PDF при разделении?",
+    "a": "Нет. В новые файлы не переносятся свойства документа (автор, программа создания, производитель PDF) и метаданные XMP. Данные, нужные для показа страниц, сохраняются как есть: например, шрифты, цветовые профили ICC, изображения JPEG 2000 и встроенные (inline) изображения. Поля форм и введённые в них значения, вложения и JavaScript тоже не копируются. Ссылки на сайты и адреса электронной почты сохраняются, а ссылки на другие страницы внутри документа и комментарии удаляются."
+   }
+  ],
+  "organize": [
+   {
+    "q": "Как поменять порядок страниц в PDF?",
+    "a": "Добавьте PDF и перетащите страницы в нужном порядке или воспользуйтесь кнопками перемещения на каждой странице. Затем сохраните PDF с новым порядком страниц."
+   },
+   {
+    "q": "Можно ли переставлять страницы с клавиатуры?",
+    "a": "Да. Выберите страницу, нажмите пробел, чтобы взять её, переместите стрелками и снова нажмите пробел, чтобы поставить на место. Esc отменяет перемещение."
+   },
+   {
+    "q": "Как удалить страницы из PDF?",
+    "a": "Нажмите кнопку удаления на странице или выберите её и нажмите Delete. В течение 10 секунд после удаления его можно отменить."
+   },
+   {
+    "q": "Как повернуть страницы PDF?",
+    "a": "Нажмите кнопку поворота на странице или выберите её и нажмите R. Каждое нажатие поворачивает страницу на 90° по часовой стрелке, и поворот сохраняется в файле."
+   },
+   {
+    "q": "Меняется ли качество страниц при перестановке?",
+    "a": "Нет. Текст и изображения страниц переносятся в новый файл без перекодирования. Поля форм (вместе со всем, что в них введено), вложения, JavaScript и метаданные документа не переносятся, поэтому, если вам нужна форма, сохраните исходный файл."
+   }
+  ],
+  "jpg": [
+   {
+    "q": "Как перевести JPG в PDF?",
+    "a": "Выберите изображения JPG или PNG или перетащите их на страницу. Задайте порядок и размер страницы, нажмите «Создать PDF» и скачайте файл."
+   },
+   {
+    "q": "Какие форматы изображений можно перевести в PDF?",
+    "a": "JPG и PNG. Каждое изображение — до 50 мегапикселей. Если фото в формате HEIC, сначала переведите их в JPG с помощью нашего конвертера HEIC в JPG."
+   },
+   {
+    "q": "Можно ли собрать несколько JPG в один PDF?",
+    "a": "Да. Добавьте до 50 изображений за раз, задайте порядок перетаскиванием или кнопками перемещения — каждое изображение станет страницей одного PDF."
+   },
+   {
+    "q": "Какой размер страницы используется при переводе JPG в PDF?",
+    "a": "Можно выбрать A4 или подогнать каждую страницу под размер её изображения."
+   },
+   {
+    "q": "Ухудшается ли качество изображений при переводе в PDF?",
+    "a": "Нет. JPG вставляются в PDF без повторного сжатия, а PNG сохраняются без потерь, поэтому качество не меняется."
+   },
+   {
+    "q": "Сохраняются ли в PDF данные о местоположении из фото?",
+    "a": "Нет. Данные EXIF и геолокация удаляются из фото до того, как они попадут в PDF."
+   }
+  ]
+ },
+ "zh": {
+  "hub": [
+   {
+    "q": "Local PDF Tools 能做什么？",
+    "a": "您可以合并 PDF 文件、拆分 PDF、调整页面顺序、旋转或删除页面，还可以把 JPG 和 PNG 图片转成 PDF。所有操作都在浏览器中完成。"
+   },
+   {
+    "q": "我的文件会上传到服务器吗？",
+    "a": "不会。文件在您的设备上处理，不会上传。您可以自行验证：打开浏览器的开发者工具，切换到“网络”（Network）标签页，即可看到处理期间您的文件不会被发送到任何地方。"
+   },
+   {
+    "q": "Local PDF Tools 免费吗？需要注册吗？",
+    "a": "免费。无需注册，也不会在您的文件上添加水印。"
+   },
+   {
+    "q": "文件大小和数量有限制吗？",
+    "a": "目前每个文件不超过 100 MB，总计不超过 300 MB，一次最多 50 个文件。生成的 PDF 最多 1000 页；在“图片转 PDF”中，每张图片不超过 5000 万像素。"
+   },
+   {
+    "q": "可以处理受密码保护的 PDF 吗？",
+    "a": "不可以。本工具不会打开受密码保护或已加密的 PDF，而是显示明确的提示。请在您持有密码的程序中取消密码，然后重新添加文件。"
+   },
+   {
+    "q": "Local PDF Tools 是用什么构建的？",
+    "a": "它使用多个开源库，包括用于生成 PDF 文件的 pdf-lib（MIT 许可证）和用于显示页面预览的 pdf.js（Apache-2.0 许可证）。两者均由我们自己的网站提供，不使用第三方脚本，也不使用 Cookie。"
+   }
+  ],
+  "merge": [
+   {
+    "q": "如何合并 PDF 文件？",
+    "a": "选择 PDF 文件或将其拖放到页面上。按需要排列页面顺序，点击“合并”，然后下载合并后的 PDF。"
+   },
+   {
+    "q": "合并前可以调整顺序吗？",
+    "a": "可以。将页面拖到新位置，或使用每个页面上的移动按钮。合并前还可以旋转或删除页面。"
+   },
+   {
+    "q": "一次最多可以合并多少个 PDF 文件？",
+    "a": "目前最多可合并 50 个 PDF 文件，每个不超过 100 MB，总计不超过 300 MB。合并后的 PDF 最多 1000 页。"
+   },
+   {
+    "q": "合并 PDF 会降低质量吗？",
+    "a": "不会。页面中的文字和图片会直接复制到新文件中，不经过重新编码，质量保持不变。交互元素会被移除：表单字段（包括其中填写的内容）、附件和 JavaScript。"
+   },
+   {
+    "q": "合并时会保留表单、链接和附件吗？",
+    "a": "网页链接和电子邮件链接会保留；跳转到文档内其他页面的链接和注释会被删除。表单字段及其中填写的内容、附件和 JavaScript 不会被复制，因此表单无法保留。作者、创建程序、PDF 生成器等文档属性以及 XMP 元数据也不会保留。"
+   }
+  ],
+  "split": [
+   {
+    "q": "如何将 PDF 拆分为多个文件？",
+    "a": "添加 PDF，选择“按范围”或“每 N 页”。点击“拆分”，生成的文件将打包为一个 ZIP 一起下载。"
+   },
+   {
+    "q": "如何从 PDF 中提取单页或连续的几页？",
+    "a": "选择“提取页面”，在缩略图上选中所需页面，它们将保存为一个新的 PDF。也可以在“按范围”中输入单页（如 5）或页码范围（如 2-4）。"
+   },
+   {
+    "q": "拆分 PDF 时如何输入页码范围？",
+    "a": "用逗号分隔页码，用连字符表示范围，例如：1-3, 5, 8-10。这个例子会生成三个文件，拆分前工具会先显示结果。"
+   },
+   {
+    "q": "可以在不上传的情况下拆分机密 PDF 吗？",
+    "a": "可以。PDF 在您设备上的浏览器中拆分，绝不会发送到服务器。"
+   },
+   {
+    "q": "拆分后的 PDF 会保留原始元数据吗？",
+    "a": "不会。新文件不会保留作者、创建程序、PDF 生成器等文档属性以及 XMP 元数据。显示页面所需的数据会原样保留，例如字体、ICC 颜色配置文件、JPEG 2000 图片和内嵌（inline）图片。表单字段及其中填写的内容、附件和 JavaScript 也不会被复制。网页链接和电子邮件链接会保留；跳转到文档内其他页面的链接和注释会被删除。"
+   }
+  ],
+  "organize": [
+   {
+    "q": "如何调整 PDF 页面顺序？",
+    "a": "添加 PDF，将页面拖动到所需位置，或使用每个页面上的移动按钮。然后保存调整顺序后的 PDF。"
+   },
+   {
+    "q": "可以用键盘调整页面顺序吗？",
+    "a": "可以。选中一个页面，按空格键将其拿起，用方向键移动，再按一次空格键放下。按 Esc 可取消移动。"
+   },
+   {
+    "q": "如何删除 PDF 中的页面？",
+    "a": "点击页面上的删除按钮，或选中页面后按 Delete 键。删除后 10 秒内可以撤销。"
+   },
+   {
+    "q": "如何旋转 PDF 页面？",
+    "a": "点击页面上的旋转按钮，或选中页面后按 R 键。每按一次，页面顺时针旋转 90°，旋转结果会保存在文件中。"
+   },
+   {
+    "q": "调整页面顺序会影响质量吗？",
+    "a": "不会。页面中的文字和图片直接移入新文件，不经过重新编码。表单字段（包括其中填写的内容）、附件、JavaScript 和文档元数据不会保留，如需该表单，请保留原文件。"
+   }
+  ],
+  "jpg": [
+   {
+    "q": "如何将 JPG 转换为 PDF？",
+    "a": "选择 JPG 或 PNG 图片，或将其拖放到页面上。设置顺序和页面大小，点击“创建 PDF”，然后下载文件。"
+   },
+   {
+    "q": "哪些图片格式可以转换为 PDF？",
+    "a": "支持 JPG 和 PNG 图片，每张图片不超过 5000 万像素。如果您的照片是 HEIC 格式，请先用我们的 HEIC 转 JPG 转换器将其转换为 JPG。"
+   },
+   {
+    "q": "可以把多张 JPG 图片合成一个 PDF 吗？",
+    "a": "可以。一次最多添加 50 张图片，通过拖动或移动按钮设置顺序，每张图片都会成为同一个 PDF 中的一页。"
+   },
+   {
+    "q": "JPG 转 PDF 使用什么页面大小？",
+    "a": "您可以选择 A4，也可以让每页与对应图片的尺寸相同。"
+   },
+   {
+    "q": "JPG 转 PDF 会降低图片质量吗？",
+    "a": "不会。JPG 图片放入 PDF 时不会被重新压缩，PNG 图片以无损方式保存，因此质量保持不变。"
+   },
+   {
+    "q": "照片中的位置信息会保留在 PDF 中吗？",
+    "a": "不会。照片放入 PDF 之前，EXIF 数据和 GPS 位置信息会被删除。"
+   }
+  ]
+ }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "local-pdf-tools-site-tools",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:css": "tailwindcss -i css/input.css -o ../build/app.css --minify",
+    "check:css": "node scripts/check-css.mjs",
+    "build:js": "node scripts/build-js.mjs",
+    "check:js": "node scripts/build-js.mjs --check",
+    "test:worker": "node test/worker-tag.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs"
+  },
+  "devDependencies": {
+    "@local-pdf-tools/core": "github:swtormy-agents/pdf-tools#047da26535530d1235f9d6df9bba946960a4cfee",
+    "@tailwindcss/cli": "4.3.3",
+    "daisyui": "5.7.50",
+    "esbuild": "0.28.2",
+    "pdfjs-dist": "6.4.299"
+  }
+}
