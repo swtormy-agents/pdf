@@ -104,7 +104,8 @@
   .errs:not(:empty) { @apply mt-6; }
   /* <600px: error cards float as a bottom stack instead of pushing the work area down (CLS at 320, Olivia M1) */
   @media (max-width: 599px) {
-    .errs { @apply fixed z-50 overflow-y-auto; inset: auto 0.75rem calc(0.75rem + env(safe-area-inset-bottom)) 0.75rem; max-height: 50vh; }
+    .errs { @apply fixed z-50 overflow-y-auto; inset: calc(100% - 0.75rem - env(safe-area-inset-bottom)) 0.75rem auto 0.75rem; max-height: 50vh; transform: translateY(-100%); }
+    /* layout box is top-anchored at the viewport bottom and lifted by its own height via transform: growth never moves the layout box (no layout-shift entry, Lucas CLS 0.145) */
     .errs:not(:empty) { @apply mt-0; }
     .errs .ecard { @apply shadow-lg; }
     /* own solid backdrop so page text never shows through the gaps (dark mode separation, Olivia 952e205 #4) */
@@ -220,6 +221,8 @@
 @keyframes th-sk { from { background-position: 150% 0; } to { background-position: -50% 0; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  /* the 0.01ms forced transition animates the stack's padding for one frame, so the first card rewraps after insertion (layout shift); the stack has no motion at all */
+  .errs, .errs * { transition-duration: 0s !important; }
 }
 /* daisyUI's noise texture is a data: URI (theme --noise is 0 anyway); CSP img-src has no data:, so it is switched off. */
 :root { --fx-noise: none; }

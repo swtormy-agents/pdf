@@ -656,6 +656,32 @@ async def run(bname, p, tmp):
         ok(pre + tag + 'Undo click restores the page', await pg.locator('#pages > .pc').count() == n0)
         await pg.close()
 
+    # ---- Lucas CLS 0.145: stack grows card by card without a layout shift (chromium; 10 runs per viewport, both reduced-motion states) ----
+    if bname == 'chromium':
+        brk = open(FX + 'broken.pdf', 'rb').read()
+        for vw, vh in ((320, 800), (568, 320)):
+            worst = [0, 0]
+            for rep in range(10):
+                rm = 'reduce' if rep % 2 else 'no-preference'
+                pg = await newpage(ctx, vw, vh); w = Watch(pg, bname); watches.append(w); await pg.emulate_media(reduced_motion=rm)
+                await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+                await pg.set_input_files('#files', [FX + 'm01.pdf', FX + 'm02.pdf']); await loaded(pg); await pg.wait_for_timeout(300)
+                await pg.evaluate("""() => { window.__ls = []; const top = (s) => Math.round(document.querySelector(s).getBoundingClientRect().top + scrollY);
+                    window.__pos = () => [top('#work'), top('#pages > .pc')]; window.__p0 = window.__pos();
+                    new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__ls.push({ v: e.value, r: e.hadRecentInput,
+                        s: (e.sources || []).map((x) => x.node ? (x.node.nodeType === 1 ? x.node : x.node.parentElement) : null).map((n) => !n ? '?' : (n.closest('#errs') ? 'errs:' + (n.id || n.className) : (n.id || n.tagName + '.' + n.className))) }); })
+                        .observe({ type: 'layout-shift', buffered: false }); }""")
+                for i in (1, 2, 3):
+                    await pg.set_input_files('#files', [{'name': f'broken-{i}.pdf', 'mimeType': 'application/pdf', 'buffer': brk}])
+                    await pg.wait_for_selector(f'#errs .ecard:nth-child({i})', timeout=20000); await pg.wait_for_selector('#proc', state='hidden'); await pg.wait_for_timeout(600)
+                ls, p0, p1 = await pg.evaluate('[window.__ls, window.__p0, window.__pos()]')
+                tot = sum(e['v'] for e in ls); nri = sum(e['v'] for e in ls if not e['r']); srcs = sorted({x for e in ls for x in e['s']})
+                worst = [max(worst[0], tot), max(worst[1], nri)]
+                ok(pre + f'CLS stack {vw}x{vh} run {rep + 1} ({rm}): 3 cards one by one, CLS all={tot:.4f} input-free={nri:.4f} < 0.01, no #errs source, work fixed',
+                   tot < 0.01 and nri < 0.01 and not any(x.startswith('errs:') for x in srcs) and p0 == p1, (tot, nri, srcs, p0, p1))
+                await pg.close()
+            print(f'  CLS stack {vw}x{vh} max over 10 runs: all={worst[0]:.4f} input-free={worst[1]:.4f}')
+
     # ---- layout: every page, 320/375/1280, light/dark; header/brand gap ----
     for scheme in ('light', 'dark'):
         c2 = await browser.new_context(color_scheme=scheme); await c2.add_init_script(INIT)
