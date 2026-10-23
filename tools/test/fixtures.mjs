@@ -9,6 +9,18 @@ async function sized(base, n) { const d = await PDFDocument.create(); for (let k
 w('contract.pdf', await sized(100, 3)); w('invoice.pdf', await sized(200, 2)); w('scan.pdf', await sized(300, 3)); w('long24.pdf', await plainPdf(24));
 w('bank-statement.pdf', encryptedPdf()); w('evil.pdf', await evilPdf()); w('broken.pdf', corruptBytes(2000));
 w('photo-gps.jpg', exifJpeg()); w('meta.png', metadataPng()); w('plain.png', plainPng(40, 30)); w('huge.jpg', jpegWithSize(10000, 6000));
+// 50 MP header limit: exactly 50,000,000 px is added; 50,000,001 px (3561x14041), a JPEG whose
+// second (progressive) SOF after the first scan is huge, and a PNG over the limit / with a second IHDR are not
+w('edge-50mp.jpg', jpegWithSize(10000, 5000)); w('over-50mp.jpg', jpegWithSize(3561, 14041));
+{ const seg = (m, p) => [0xff, m, (p.length + 2) >> 8, (p.length + 2) & 255, ...p];
+  const sof = (m, wd, h) => seg(m, [8, h >> 8, h & 255, wd >> 8, wd & 255, 1, 1, 0x11, 0]);
+  const sos = [...seg(0xda, [1, 1, 0, 0, 63, 0]), 0x12, 0x34];
+  w('sneaky-sof.jpg', Uint8Array.from([0xff, 0xd8, ...sof(0xc0, 16, 16), ...sos, ...sof(0xc2, 20000, 20000), ...sos, 0xff, 0xd9]));
+  const be = (v) => [v >>> 24, (v >> 16) & 255, (v >> 8) & 255, v & 255];
+  const ch = (t, dt) => [...be(dt.length), ...Buffer.from(t, 'latin1'), ...dt, 0, 0, 0, 0];
+  const ihdr = (wd, h) => ch('IHDR', [...be(wd), ...be(h), 8, 2, 0, 0, 0]);
+  const png = (...c) => Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...c.flat(), ...ch('IEND', [])]);
+  w('over-50mp.png', png(ihdr(3561, 14041))); w('dup-ihdr.png', png(ihdr(8, 8), ihdr(20000, 20000))); }
 // 6000 small pages for the split limits (1000 per part, 5000 total, 50 parts)
 { const d6 = await PDFDocument.create(); for (let k = 0; k < 6000; k++) d6.addPage([200, 200]); w('long6000.pdf', await d6.save()); }
 // 60 pages: 'every 1 page' gives 60 parts (> 50 -> err_split_parts)

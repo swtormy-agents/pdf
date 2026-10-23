@@ -4,7 +4,7 @@
 // Limits are checked here at file selection, before parsing (core LIMITS, one source of truth with the MCP).
 import { LIMITS } from '../node_modules/@local-pdf-tools/core/src/limits.js';
 import { parsePageRanges } from '../node_modules/@local-pdf-tools/core/src/ranges.js';
-import { jpegSize, pngSize } from '../node_modules/@local-pdf-tools/core/src/images.js';
+import { imagePixels } from '../node_modules/@local-pdf-tools/core/src/images.js';
 import { zip } from './zip.js';
 
 const $ = (id) => document.getElementById(id);
@@ -267,9 +267,10 @@ function init() {
           const b = new Uint8Array(await f.arrayBuffer());
           const kind = sniff(b);
           if (!kind) { errFor('UNSUPPORTED_IMAGE', f); continue; }
+          // Header-only pixel count (largest JPEG SOFn/DHP frame, single PNG IHDR), before any decode or thumbnail.
           let dim;
-          try { dim = kind === 'jpeg' ? jpegSize(b) : pngSize(b); } catch { errFor('IMAGE_INVALID', f); continue; }
-          if (dim.width * dim.height > LIMITS.MAX_IMAGE_PIXELS) { errFor('IMAGE_TOO_LARGE', f); continue; }
+          try { dim = imagePixels(b, kind); } catch { errFor('IMAGE_INVALID', f); continue; }
+          if (dim.pixels > LIMITS.MAX_IMAGE_PIXELS) { errFor('IMAGE_TOO_LARGE', f); continue; }
           added.push({ id: seq++, file: f, name: f.name, size: f.size, pages: 1, kind: 'image' });
         }
       } catch (e) {
