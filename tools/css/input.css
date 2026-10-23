@@ -102,6 +102,12 @@
   /* error cards (spec «Errors») */
   .errs { @apply flex flex-col gap-2; }
   .errs:not(:empty) { @apply mt-6; }
+  /* <600px: error cards float as a bottom stack instead of pushing the work area down (CLS at 320, Olivia M1) */
+  @media (max-width: 599px) {
+    .errs { @apply fixed z-50 overflow-y-auto; inset: auto 0.75rem calc(0.75rem + env(safe-area-inset-bottom)) 0.75rem; max-height: 50vh; }
+    .errs:not(:empty) { @apply mt-0; }
+    .errs .ecard { @apply shadow-lg; }
+  }
   .ecard { @apply flex items-start gap-3 rounded-box border border-error bg-base-100 p-3 sm:p-4; }
   .ecard > svg { @apply size-6 shrink-0 text-error mt-0.5; }
   .ecard .eb { @apply flex-1 min-w-0; }

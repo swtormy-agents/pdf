@@ -603,6 +603,21 @@ async def run(bname, p, tmp):
         ok(pre + 'processing: Cancel (job finished before cancel could be clicked)', await pg.is_visible('#done'), str(e)[:100])
     await pg.close()
 
+    # ---- CLS at 320 when an error card appears (Olivia M1): neighbours must not move ----
+    # Playwright's set_input_files marks shifts as hadRecentInput, so the raw sum of all entries is used (stricter).
+    for page_, first, bad, code in (('jpg-to-pdf.html', ['plain.png'], ['over-50mp.jpg'], 'IMAGE_TOO_LARGE'), ('merge-pdf.html', ['m01.pdf', 'm02.pdf'], ['broken.pdf'], 'PDF_INVALID')):
+        pg = await newpage(ctx, 320, 800); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + page_); await ready(pg)
+        await pg.set_input_files('#files', [FX + f for f in first]); await loaded(pg); await pg.wait_for_timeout(500)
+        await pg.evaluate("""() => { window.__cls = 0; const top = (s) => Math.round(document.querySelector(s).getBoundingClientRect().top + scrollY);
+            window.__pos = () => [top('#work'), top('#pages > .pc')]; window.__p0 = window.__pos();
+            if (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
+                new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__cls += e.value; }).observe({ type: 'layout-shift' }); else window.__cls = null; }""")
+        await pg.set_input_files('#files', [FX + f for f in bad]); await pg.wait_for_selector(f'#errs .ecard[data-code={code}]', timeout=20000); await pg.wait_for_timeout(800)
+        cls, p0, p1 = await pg.evaluate('[window.__cls, window.__p0, window.__pos()]')
+        ok(pre + f'CLS 320 {page_} {code}: work area does not move' + ('' if cls is None else ', CLS < 0.01'), p0 == p1 and (cls is None or cls < 0.01), (cls, p0, p1))
+        await pg.close()
+
     # ---- layout: every page, 320/375/1280, light/dark; header/brand gap ----
     for scheme in ('light', 'dark'):
         c2 = await browser.new_context(color_scheme=scheme); await c2.add_init_script(INIT)
