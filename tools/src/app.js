@@ -247,7 +247,7 @@ function init() {
       if (total + f.size > LIMITS.MAX_TOTAL_BYTES) { if (!totalShown) errFor('TOO_LARGE', f, { total: true }); totalShown = true; continue; }
       total += f.size; ok.push(f);
     }
-    if (!ok.length) { update(); return; }
+    if (!ok.length) { render(); return; }
     // 2) open: page count / encryption (core pdfInfo in the worker) or image header
     setBusy(true);
     showProc(t('proc_opening'), null);

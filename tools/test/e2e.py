@@ -74,6 +74,24 @@ async def run(bname, p, tmp):
     ctx = await browser.new_context(accept_downloads=True); await ctx.add_init_script(INIT)
     watches = []
 
+    # ---- QA M1/L1 (398ade0): build-time refchain error names the file; all files rejected -> no pageerror ----
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'contract.pdf', FX + 'refchain40.pdf']); await loaded(pg)
+    await pg.click('#go'); await pg.wait_for_selector('#errs .ecard', timeout=30000); await pg.wait_for_selector('#proc', state='hidden')
+    codes = await pg.eval_on_selector_all('#errs .ecard', 'e => e.map(x => x.dataset.code)'); etxt = await pg.inner_text('#errs')
+    ok(pre + 'merge: refchain-40 in a 2-file merge -> PDF_INVALID card naming the file, no FAILED', codes == ['PDF_INVALID'] and 'refchain40.pdf' in etxt, (codes, etxt[:120]))
+    big = os.path.join(tmp, 'big101.pdf')
+    if not os.path.exists(big):
+        with open(big, 'wb') as fh: fh.truncate(101 * 1024 * 1024)
+    n0 = len(w.errors)
+    pg2 = await newpage(ctx); w2 = Watch(pg2, bname); watches.append(w2)
+    await pg2.goto(B + 'merge-pdf.html'); await ready(pg2)
+    await pg2.set_input_files('#files', [big]); await pg2.wait_for_selector('#errs .ecard'); await pg2.wait_for_timeout(300)
+    codes = await pg2.eval_on_selector_all('#errs .ecard', 'e => e.map(x => x.dataset.code)')
+    ok(pre + 'merge: all files rejected (101 MB) -> TOO_LARGE card, no pageerror', codes == ['TOO_LARGE'] and not w2.errors and len(w.errors) == n0, (codes, w2.errors))
+    await pg.close(); await pg2.close()
+
     # ---- merge (ru): errors + reorder by button, keyboard, drag, delete+undo; output order/rotation = screen ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
     await pg.goto(B + 'ru/merge-pdf.html'); await ready(pg)

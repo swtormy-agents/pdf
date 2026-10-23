@@ -381,3 +381,49 @@ sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.
  +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'+''.join(f'<xhtml:link rel="alternate" hreflang="{HREFLANG[x]}" href="{url(x,p)}"/>' for x in LANGS)+f'<xhtml:link rel="alternate" hreflang="x-default" href="{url("en",p)}"/></url>\n' for l,p in SM)+'</urlset>\n')
 if not os.path.exists('sitemap.xml') or open('sitemap.xml').read()!=sm: open('sitemap.xml','w').write(sm)
 print(len(pages),'pages,',len(SM),'sitemap URLs')
+
+# ---------- llms.txt + Markdown twins for AI agents (en only; Sergey Barrow) ----------
+# Same en strings as the HTML pages; links are canonical sitemap URLs only; the .md/.txt files are NOT in the sitemap
+# (converter convention). Output goes through the same BANNED check; any hit fails the build.
+def gen_llms():
+    t=T['en']; S=SEO['en']; F=FAQ['en']
+    INTRO='Files are processed in your browser and never leave your device. Free and open source: no uploads, no cookies, no ads.'  # Nathan-approved; BANNED-checked via w()
+    md_url=lambda p:BASE+p[:-5]+'.md'
+    def w(path,s):
+        chk=s.replace('are not unlocked','')  # same Counsel exemption as check_page
+        m=BANNED.search(chk); assert not m, f'banned word {m.group(0)!r} in {path}'
+        assert NB not in s and '\u2011' not in s, f'non-plain space/hyphen in {path}'
+        if not os.path.exists(path) or open(path,encoding='utf-8').read()!=s: open(path,'w',encoding='utf-8').write(s)
+    def faq_md(key): return f'## {t["faq_h"]}\n\n'+''.join(f'### {plain(x["q"])}\n\n{plain(faq_plain(x["a"]))}\n\n' for x in F[key])
+    def tools_md(skip=None): return ''.join(f'- [{t[MODE_KEY[m]]}]({url("en",p)}): {t[MODE_KEY[m]+"_desc"]}\n' for m,p in MODE_PAGE.items() if m!=skip)
+    tail=f'{plain(t["foot"])}\n\n{plain(t["legal"])}\n'
+    files={}
+    for page,key,mode in TOOLS:
+        s=S[key]; hub=page=='index.html'
+        out=f'# {plain(t["h1_home"] if hub else s["h1"])}\n\nHTML version: {url("en",page)}\n\n{plain(t["lede"] if hub else s["meta"])}\n\n'
+        if hub: out+=f'{plain(s["meta"])}\n\n'+tools_md()+'\n'
+        if mode=='images': out+=f'{plain(t["meta_notice"])}\n\n'
+        out+=faq_md(key)
+        if not hub: out+=f'## {t["other_tools"]}\n\n'+tools_md(skip=mode)+'\n'
+        files[page[:-5]+'.md']=out+tail
+    # privacy: text of the generated en privacy page (already stripped of unverified claims there)
+    ph=privacy_page('en'); body=ph.split('<main',1)[1].split('>',1)[1].split('</main>',1)[0]
+    body=re.sub(r'<a href="([^"]+)">(.*?)</a>',r'[\2](\1)',body)
+    body=re.sub(r'<h1[^>]*>(.*?)</h1>',r'# \1\n\nHTML version: '+url('en','privacy.html')+'\n',body)
+    body=re.sub(r'<h2[^>]*>(.*?)</h2>',r'## \1\n',body); body=re.sub(r'<b>(.*?)</b>',r'**\1**',body)
+    body=re.sub(r'<code>(.*?)</code>',r'`\1`',body); body=body.replace('</p>','\n\n').replace('<p>','')
+    assert '<' not in body, 'unconverted tag in privacy.md'
+    files['privacy.md']=re.sub(r'\n{3,}','\n\n',html.unescape(body).replace(NB,' ').strip()+'\n')
+    lic=(f'# {re.split(r" [–—] ",t["licenses_title"])[0]}\n\nHTML version: {url("en","licenses.html")}\n\n{t["licenses_body"]}\n\n## {t["lic_h_libs"]}\n\n'
+         f'| {t["lic_col_pkg"]} | {t["lic_col_ver"]} | {t["lic_col_lic"]} |\n|---|---|---|\n'+''.join(f'| {n} | {v} | {l.replace("see below","see the full notice on the [HTML version]("+url("en","licenses.html")+")")} |\n' for n,v,l,_ in LIBS['libs'])
+         +f'\nFull licence texts: {url("en","licenses.html")}\n')
+    files['licenses.md']=lic
+    txt=(f'# Local PDF Tools\n\n> {plain(S["hub"]["meta"])}\n\n{INTRO}\n\n'
+         f'## Tools\n\n'+tools_md()+
+         f'\n## Docs\n\n- [{plain(t["h1_home"])}]({md_url("index.html")})\n'+''.join(f'- [{plain(S[k]["h1"])}]({md_url(p)})\n' for p,k,_ in TOOLS[1:])
+         +f'- [{t["f_priv"]}]({md_url("privacy.html")})\n- [{t["f_lic"]}]({md_url("licenses.html")})\n'
+         f'\n## Optional\n\n- [{t["f_src"]}]({REPO}): MIT\n- [Local PDF Tools (HTML)]({url("en","index.html")})\n\n{plain(t["legal"])}\n')
+    files['llms.txt']=txt
+    for p,s in files.items(): w(p,s)
+    return sorted(files)
+print('llms:',', '.join(gen_llms()))
