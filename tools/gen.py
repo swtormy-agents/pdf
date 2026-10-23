@@ -99,7 +99,7 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
     return f'''<!doctype html><html lang="{HREFLANG[lang]}"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="{CSP}">
 <meta name="referrer" content="no-referrer">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{e(plain(title))}</title><meta name="description" content="{e(plain(desc))}">
 <link rel="canonical" href="{url(lang,page)}">
 {alts}

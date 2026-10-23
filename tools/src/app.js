@@ -72,6 +72,19 @@ function init() {
   const input = $('files'), drop = $('drop'), errs = $('errs'), work = $('work'), list = $('pages'), go = $('go');
   const proc = $('proc'), done = $('done'), live = $('live'), toast = $('toast'), confirmDlg = $('confirm');
   const counts = $('counts');
+  // <600px the error stack is fixed at the bottom: publish its height as --errs-h (0 when empty or static) so CSS can reserve room
+  const setErrsH = () => {
+    const h = getComputedStyle(errs).position === 'fixed' && errs.children.length ? Math.ceil(errs.getBoundingClientRect().height) + 12 : 0;
+    document.documentElement.style.setProperty('--errs-h', h + 'px');
+  };
+  if (window.ResizeObserver) new ResizeObserver(setErrsH).observe(errs);
+  matchMedia('(max-width: 599px)').addEventListener('change', setErrsH);
+  // Firefox ignores scroll-padding when focus() scrolls; make sure a focused control outside the stack ends above it (WCAG 2.4.11)
+  document.addEventListener('focusin', (ev) => {
+    const x = ev.target; if (!errs.children.length || errs.contains(x) || x.closest('.toast') || getComputedStyle(errs).position !== 'fixed') return;
+    requestAnimationFrame(() => { const r = x.getBoundingClientRect(), top = errs.getBoundingClientRect().top - 12;
+      if (r.top < 0) scrollBy(0, r.top - 12); else if (r.bottom > top) scrollBy(0, Math.min(r.bottom - top, r.top)); });
+  });
   const hero = document.querySelector('.hero');
 
   // ---------- state ----------

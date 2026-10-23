@@ -603,6 +603,85 @@ async def run(bname, p, tmp):
         ok(pre + 'processing: Cancel (job finished before cancel could be clicked)', await pg.is_visible('#done'), str(e)[:100])
     await pg.close()
 
+    # ---- CLS at 320 when an error card appears (Olivia M1): neighbours must not move ----
+    # Playwright's set_input_files marks shifts as hadRecentInput, so the raw sum of all entries is used (stricter).
+    for page_, first, bad, code in (('jpg-to-pdf.html', ['plain.png'], ['over-50mp.jpg'], 'IMAGE_TOO_LARGE'), ('merge-pdf.html', ['m01.pdf', 'm02.pdf'], ['broken.pdf'], 'PDF_INVALID')):
+        pg = await newpage(ctx, 320, 800); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + page_); await ready(pg)
+        await pg.set_input_files('#files', [FX + f for f in first]); await loaded(pg); await pg.wait_for_timeout(500)
+        await pg.evaluate("""() => { window.__cls = 0; const top = (s) => Math.round(document.querySelector(s).getBoundingClientRect().top + scrollY);
+            window.__pos = () => [top('#work'), top('#pages > .pc')]; window.__p0 = window.__pos();
+            if (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
+                new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__cls += e.value; }).observe({ type: 'layout-shift' }); else window.__cls = null; }""")
+        await pg.set_input_files('#files', [FX + f for f in bad]); await pg.wait_for_selector(f'#errs .ecard[data-code={code}]', timeout=20000); await pg.wait_for_timeout(800)
+        cls, p0, p1 = await pg.evaluate('[window.__cls, window.__p0, window.__pos()]')
+        ok(pre + f'CLS 320 {page_} {code}: work area does not move' + ('' if cls is None else ', CLS < 0.01'), p0 == p1 and (cls is None or cls < 0.01), (cls, p0, p1))
+        await pg.close()
+
+    # ---- <600 error stack with 3 cards (Olivia 952e205 F1-F3): footer reachable, focus not obscured, Undo above the stack, 40vh when h<420 ----
+    bad3 = [{'name': f'broken-{i}.pdf', 'mimeType': 'application/pdf', 'buffer': open(FX + 'broken.pdf', 'rb').read()} for i in (1, 2, 3)]
+    for vw, vh in ((320, 800), (568, 320)):
+        tag = f'stack {vw}x{vh} 3 cards: '
+        pg = await newpage(ctx, vw, vh); w = Watch(pg, bname); watches.append(w)
+        await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+        await pg.set_input_files('#files', [FX + 'm01.pdf', FX + 'm02.pdf']); await loaded(pg)
+        await pg.set_input_files('#files', bad3); await pg.wait_for_selector('#errs .ecard:nth-child(3)', timeout=20000); await pg.wait_for_timeout(400)
+        st = await pg.evaluate("""() => { const e = document.getElementById('errs').getBoundingClientRect();
+            return { h: e.height, vh: innerHeight, pos: getComputedStyle(errs).position, v: getComputedStyle(document.documentElement).getPropertyValue('--errs-h').trim() }; }""")
+        ok(pre + tag + 'stack is fixed and --errs-h is set', st['pos'] == 'fixed' and st['v'] not in ('', '0px'), st)
+        if vh < 420: ok(pre + tag + 'stack height <= 40vh', st['h'] <= 0.4 * vh + 0.5, st)
+        await pg.evaluate("scrollTo(0, document.documentElement.scrollHeight)"); await pg.wait_for_timeout(200)
+        fv = await pg.evaluate("""() => { const f = document.querySelector('footer').getBoundingClientRect(), e = document.getElementById('errs').getBoundingClientRect();
+            return [Math.round(f.top), Math.round(f.bottom), Math.round(e.top)]; }""")
+        # if the footer is taller than the room above the stack (568x320: 204 px vs 180 px), its end must still clear the stack
+        ok(pre + tag + 'footer fully visible above the stack at end of scroll' + (' (footer taller than free area: end clears the stack)' if fv[1] - fv[0] > fv[2] else ''),
+           fv[1] <= fv[2] and (fv[0] >= 0 or fv[1] - fv[0] > fv[2]), fv)
+        hid = await pg.evaluate("""async () => { const errs = document.getElementById('errs'), bad = [];
+            const els = [...document.querySelectorAll('a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"])')]
+                .filter((x) => !x.disabled && !errs.contains(x) && !x.closest('#toast') && x.getClientRects().length && getComputedStyle(x).visibility !== 'hidden');
+            for (const x of els) { x.focus(); if (document.activeElement !== x) continue; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+                const r = x.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
+                const cx = Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1), cy = Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1);
+                const hit = document.elementFromPoint(cx, cy);
+                if (!hit || errs.contains(hit) || r.bottom <= 0 || r.top >= innerHeight) bad.push((x.id || x.tagName) + ':' + (x.getAttribute('aria-label') || x.textContent).trim().slice(0, 30)); }
+            return [els.length, bad]; }""")
+        ok(pre + tag + f'no focused element is covered by #errs ({hid[0]} checked)', hid[0] > 5 and not hid[1], hid[1][:8])
+        await pg.evaluate("scrollTo(0, 0)"); n0 = await pg.locator('#pages > .pc').count()
+        await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click(); await pg.wait_for_selector('#toast:not([hidden])')
+        tv = await pg.evaluate("""() => { const b = document.querySelector('#toast button').getBoundingClientRect(), t = document.getElementById('toast').getBoundingClientRect(),
+            e = document.getElementById('errs').getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+            return [Math.round(t.bottom), Math.round(e.top), !!(hit && hit.closest('#toast')), t.top >= 0]; }""")
+        ok(pre + tag + 'Undo toast is above the stack and hit-testable', tv[0] <= tv[1] and tv[2] and tv[3], tv)
+        await pg.click('#toast button', timeout=3000); await pg.wait_for_timeout(150)
+        ok(pre + tag + 'Undo click restores the page', await pg.locator('#pages > .pc').count() == n0)
+        await pg.close()
+
+    # ---- Lucas CLS 0.145: stack grows card by card without a layout shift (chromium; 10 runs per viewport, both reduced-motion states) ----
+    if bname == 'chromium':
+        brk = open(FX + 'broken.pdf', 'rb').read()
+        for vw, vh in ((320, 800), (568, 320)):
+            worst = [0, 0]
+            for rep in range(10):
+                rm = 'reduce' if rep % 2 else 'no-preference'
+                pg = await newpage(ctx, vw, vh); w = Watch(pg, bname); watches.append(w); await pg.emulate_media(reduced_motion=rm)
+                await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+                await pg.set_input_files('#files', [FX + 'm01.pdf', FX + 'm02.pdf']); await loaded(pg); await pg.wait_for_timeout(300)
+                await pg.evaluate("""() => { window.__ls = []; const top = (s) => Math.round(document.querySelector(s).getBoundingClientRect().top + scrollY);
+                    window.__pos = () => [top('#work'), top('#pages > .pc')]; window.__p0 = window.__pos();
+                    new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__ls.push({ v: e.value, r: e.hadRecentInput,
+                        s: (e.sources || []).map((x) => x.node ? (x.node.nodeType === 1 ? x.node : x.node.parentElement) : null).map((n) => !n ? '?' : (n.closest('#errs') ? 'errs:' + (n.id || n.className) : (n.id || n.tagName + '.' + n.className))) }); })
+                        .observe({ type: 'layout-shift', buffered: false }); }""")
+                for i in (1, 2, 3):
+                    await pg.set_input_files('#files', [{'name': f'broken-{i}.pdf', 'mimeType': 'application/pdf', 'buffer': brk}])
+                    await pg.wait_for_selector(f'#errs .ecard:nth-child({i})', timeout=20000); await pg.wait_for_selector('#proc', state='hidden'); await pg.wait_for_timeout(600)
+                ls, p0, p1 = await pg.evaluate('[window.__ls, window.__p0, window.__pos()]')
+                tot = sum(e['v'] for e in ls); nri = sum(e['v'] for e in ls if not e['r']); srcs = sorted({x for e in ls for x in e['s']})
+                worst = [max(worst[0], tot), max(worst[1], nri)]
+                ok(pre + f'CLS stack {vw}x{vh} run {rep + 1} ({rm}): 3 cards one by one, CLS all={tot:.4f} input-free={nri:.4f} < 0.01, no #errs source, work fixed',
+                   tot < 0.01 and nri < 0.01 and not any(x.startswith('errs:') for x in srcs) and p0 == p1, (tot, nri, srcs, p0, p1))
+                await pg.close()
+            print(f'  CLS stack {vw}x{vh} max over 10 runs: all={worst[0]:.4f} input-free={worst[1]:.4f}')
+
     # ---- layout: every page, 320/375/1280, light/dark; header/brand gap ----
     for scheme in ('light', 'dark'):
         c2 = await browser.new_context(color_scheme=scheme); await c2.add_init_script(INIT)
