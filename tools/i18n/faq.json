@@ -23,7 +23,7 @@
    },
    {
     "q": "What is Local PDF Tools built with?",
-    "a": "It uses open-source libraries, including pdf-lib (MIT license) to create the PDF files and pdf.js (Apache-2.0 license) to show page previews. Both are served from our own site, with no third-party scripts and no cookies."
+    "a": "It uses open-source libraries, including pdf-lib (MIT licence) to create the PDF files and pdf.js (Apache-2.0 licence) to show page previews. Both are served from our own site, with no third-party scripts and no cookies."
    }
   ],
   "merge": [

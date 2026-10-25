@@ -96,11 +96,14 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
          f'<nav aria-labelledby="lang-h"><p id="lang-h" class="px-3 pt-2 pb-1 text-xs font-medium text-base-content/80">{e(t["lang_nav"])}</p><ul class="menu w-full p-0">'+''.join(li(l) for l in LANGS)+'</ul></nav>'
          f'<div class="theme-sec hidden sm:block"><hr class="my-1.5 mx-1 border-base-300"><fieldset><legend id="theme-h" class="px-3 pt-2 pb-1 text-xs font-medium text-base-content/80">{e(t["theme"])}</legend>'
          f'<div class="join flex w-full p-0.5 border border-base-300 rounded-field" role="radiogroup" aria-labelledby="theme-h">{radios}</div></fieldset></div></div></details>')
+    zh_meta = ('<meta name="applicable-device" content="pc,mobile">\n'
+               '<meta http-equiv="Cache-Control" content="no-transform">\n'
+               '<meta http-equiv="Content-Language" content="zh-CN">\n') if lang == 'zh' else ''
     return f'''<!doctype html><html lang="{HREFLANG[lang]}"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="{CSP}">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>{e(plain(title))}</title><meta name="description" content="{e(plain(desc))}">
+{zh_meta}<title>{e(plain(title))}</title><meta name="description" content="{e(plain(desc))}">
 <link rel="canonical" href="{url(lang,page)}">
 {alts}
 <meta property="og:type" content="website"><meta property="og:site_name" content="Local PDF Tools"><meta property="og:locale" content="{OG_LOCALE[lang]}"><meta property="og:title" content="{e(plain(title))}"><meta property="og:description" content="{e(plain(desc))}"><meta property="og:url" content="{url(lang,page)}">
@@ -221,7 +224,7 @@ def tool_page(lang,page,key,mode):
     t=T[lang]; s=SEO[lang][key]; hub=page=='index.html'
     h1=t['h1_home'] if hub else s['h1']
     faqs=FAQ[lang][key]
-    ld=[{'@context':'https://schema.org','@type':'WebApplication','name':plain(s['title']),'description':plain(s['meta']),'url':url(lang,page),'inLanguage':HREFLANG[lang],
+    ld=[{'@context':'https://schema.org','@type':'WebApplication','name':'Local PDF Tools','description':plain(s['meta']),'url':url(lang,page),'inLanguage':HREFLANG[lang],
          'applicationCategory':'UtilitiesApplication','operatingSystem':'Any','browserRequirements':'Requires JavaScript','isAccessibleForFree':True,'offers':{'@type':'Offer','price':'0','priceCurrency':'USD'}}]
     ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':faq_plain(x['a'])}} for x in faqs]})
     P='' if lang=='en' else '../'
@@ -328,6 +331,7 @@ def plain_meta(s):
 BANNED=re.compile(r'adobe|acrobat|ilovepdf|smallpdf|sejda|pdf24|unlock|donat|boosty|поддержать проект|iphone|offline|офлайн|离线|онлайн',re.I)
 def check_page(lang,p,s):
     vis_txt=re.sub(r'<pre class="lic".*?</pre>','',s,flags=re.S) if p=='licenses.html' else s
+    vis_txt=re.sub(r'<script type="application/json" id="i18n">.*?</script>','',vis_txt,flags=re.S)
     vis_txt=vis_txt.replace('are not unlocked','')  # Counsel's privacy text denies unlocking; that is allowed
     if p=='jpg-to-pdf.html':  # the UNSUPPORTED_IMAGE card's HEIC -> JPG link data must be present exactly once
         assert s.count(heic_attrs(lang))==1, f'HEIC card link data missing in {lang}/{p}'
