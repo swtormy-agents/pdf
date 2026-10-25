@@ -19,8 +19,8 @@ LANG_CODE={'en':'EN','ru':'RU','zh':''}
 OG_LOCALE={'en':'en_US','ru':'ru_RU','zh':'zh_CN'}
 NB='\u00a0'
 def load(n): return json.load(open(f'tools/i18n/{n}',encoding='utf-8'))
-UI={l:load(f'{l}.json') for l in LANGS}; SEO=load('seo.json'); FAQ=load('faq.json'); PRIV=load('privacy.json'); HDR=load('header.json')
-T={l:{**UI[l],**HDR[l]} for l in LANGS}
+UI={l:load(f'{l}.json') for l in LANGS}; SEO=load('seo.json'); FAQ=load('faq.json'); PRIV=load('privacy.json'); HDR=load('header.json'); IL=load('interlink.json')
+T={l:{**UI[l],**HDR[l],**IL[l]} for l in LANGS}
 
 # page file -> (seo key, app mode, faq key)
 TOOLS=[('index.html','hub','merge'),('merge-pdf.html','merge','merge'),('split-pdf.html','split','split'),('organize-pdf.html','organize','organize'),('jpg-to-pdf.html','jpg','images')]
@@ -38,6 +38,43 @@ def plain(s): return s.replace(NB,' ').replace('\u2011','-')
 def lp(l): return '' if l=='en' else l+'/'
 def url(l,p): return BASE+lp(l)+('' if p=='index.html' else p)
 def rel(p): return './' if p=='index.html' else p
+def home_href(l): return '/' if l=='en' else f'/{l}/'
+def home_abs(l): return 'https://noclaudkit.com'+home_href(l)
+CONV_ROOT='/image-converter/'
+FT_KEYS=('home','conv','pdf','heic','merge','split','jpg')
+FT_LABEL={'home':'ft_home','conv':'f_conv','pdf':'f_pdf','heic':'ft_heic','merge':'ft_merge','split':'ft_split','jpg':'ft_jpg'}
+PAGE_CRUMB={'merge-pdf.html':'ft_merge','split-pdf.html':'ft_split','jpg-to-pdf.html':'ft_jpg',
+            'organize-pdf.html':'mode_reorder','privacy.html':'f_priv','licenses.html':'f_lic'}
+def ft_href(lang,key):
+    p=lp(lang)
+    return {'home':home_href(lang),'conv':CONV_ROOT+p,'pdf':ROOT+p,'heic':CONV_ROOT+p+'heic-to-jpg.html',
+            'merge':'merge-pdf.html','split':'split-pdf.html','jpg':'jpg-to-pdf.html'}[key]
+def ft_is_current(page,key):
+    return {'index.html':'pdf','merge-pdf.html':'merge','split-pdf.html':'split','jpg-to-pdf.html':'jpg'}.get(page)==key
+def crumb_trail(lang,page):
+    """Visible trail + absolute canonical URLs (JSON-LD). Last item has href None."""
+    t=T[lang]
+    home=(home_href(lang),t['ft_home'],home_abs(lang),True)
+    pdf=(ROOT+lp(lang),t['f_pdf'],url(lang,'index.html'),False)
+    if page=='index.html':
+        return [home,(None,t['f_pdf'],url(lang,page),False)]
+    return [home,pdf,(None,t[PAGE_CRUMB[page]],url(lang,page),False)]
+def crumbs_html(lang,page):
+    t=T[lang]; lis=[]
+    for href,name,_,tr in crumb_trail(lang,page):
+        vn=e(vis(lang,name))
+        if href is None: lis.append(f'<li><span aria-current="page">{vn}</span></li>')
+        else: lis.append(f'<li><a href="{e(href)}"'+(' translate="no"' if tr else '')+f'>{vn}</a></li>')
+    return f'<nav class="crumbs" aria-label="{e(t["crumbs_aria"])}"><ol>'+''.join(lis)+'</ol></nav>\n'
+def crumbs_ld(lang,page):
+    items=[{'@type':'ListItem','position':i,'name':plain(vis(lang,name)),'item':absu}
+           for i,(_,name,absu,_) in enumerate(crumb_trail(lang,page),1)]
+    return {'@context':'https://schema.org','@type':'BreadcrumbList','itemListElement':items}
+def merge_cross_html(lang):
+    t=T[lang]; name=t['ft_jpg']
+    full=vis(lang,t['merge_cross'].replace('{link}',name)); vn=e(vis(lang,name))
+    linked=e(full).replace(vn,f'<a class="link link-primary inline-flex items-center min-h-11" href="jpg-to-pdf.html">{vn}</a>',1)
+    return f'<p class="cross mt-3">{linked}</p>\n'
 OG_SEP={'en':'. ','ru':'. ','zh':'。'}
 def og_img(lang):  # absolute, same BASE as canonical; ?v= = sha256[:8] of the committed PNG (tools/scripts/og.py), as in the converter
     with open(f'assets/og/og-{lang}.png','rb') as f: b=f.read()
@@ -80,7 +117,7 @@ def jsonld(objs):
         j=json.dumps(d,ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
         out+=f'<script type="application/ld+json">{j}</script>\n'
     return out
-def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
+def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False,crumbs=''):
     t=T[lang]; P='' if lang=='en' else '../'
     alts=''.join(f'<link rel="alternate" hreflang="{HREFLANG[l]}" href="{url(l,page)}">' for l in LANGS)+f'<link rel="alternate" hreflang="x-default" href="{url("en",page)}">'
     def li(l):
@@ -115,14 +152,21 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False):
 <div class="navbar-start min-w-0 w-auto grow"><a class="brand flex items-center gap-2 min-h-11 font-semibold text-sm sm:text-lg whitespace-nowrap" href="./" translate="no">{LOGO}<span>Local{NB}PDF{NB}Tools</span></a></div>
 <div class="navbar-end w-auto">{nav}</div></div></header>
 <main id="main" class="mx-auto w-full max-w-5xl px-4 sm:px-6 py-8 sm:py-12 grow">
-'''
+{crumbs}'''
 
 def foot(lang,page):
     t=T[lang]
-    links=[(ROOT+lp(lang),t['f_pdf'],page=='index.html'),('/image-converter/'+lp(lang),t['f_conv'],False),('privacy.html',t['f_priv'],page=='privacy.html'),
-           (REPO,t['f_src'],False),(REPO+'/issues',t['f_contact'],False),('licenses.html',t['f_lic'],page=='licenses.html')]
-    return (f'</main>\n<footer class="bg-base-200 mt-12"><div class="footer sm:footer-horizontal mx-auto max-w-5xl px-4 sm:px-6 py-6 text-base-content"><div class="max-w-xl text-sm space-y-1"><p>{e(t["foot"])}</p><p>{e(t["legal"])}</p></div><ul class="flinks flex flex-wrap gap-x-4">'
-            +''.join(f'<li><a class="link link-hover min-h-11 min-w-11 inline-flex items-center justify-center whitespace-nowrap" href="{h}"'+(' aria-current="page"' if cur else '')+f'>{e(x)}</a></li>' for h,x,cur in links)+'</ul></div></footer></body></html>\n')
+    items=[]
+    for key in FT_KEYS:
+        h,lab,cur=ft_href(lang,key),e(vis(lang,t[FT_LABEL[key]])),ft_is_current(page,key)
+        items.append(f'<li><a href="{e(h)}"'+(' translate="no"' if key=='home' else '')+(' aria-current="page"' if cur else '')+f'>{lab}</a></li>')
+    about=[('privacy.html',t['f_priv'],page=='privacy.html'),(REPO,t['f_src'],False),(REPO+'/issues',t['f_contact'],False),('licenses.html',t['f_lic'],page=='licenses.html')]
+    about_html=''.join(f'<li><a class="link link-hover min-h-11 min-w-11 inline-flex items-center" href="{h}"'+(' aria-current="page"' if cur else '')+f'>{e(vis(lang,x))}</a></li>' for h,x,cur in about)
+    return (f'</main>\n<footer class="bg-base-200 mt-12"><div class="mx-auto max-w-5xl px-4 sm:px-6 py-6 text-base-content space-y-6">'
+            f'<div class="max-w-xl text-sm space-y-1"><p>{e(t["foot"])}</p><p>{e(t["legal"])}</p></div>'
+            f'<nav class="ft" aria-labelledby="ft-h"><h2 id="ft-h">{e(vis(lang,t["ft_all"]))}</h2><ul>'+''.join(items)+'</ul></nav>'
+            f'<nav class="about" aria-label="{e(t["about_aria"])}"><ul class="flinks flex flex-wrap gap-x-4">'+about_html+'</ul></nav>'
+            '</div></footer></body></html>\n')
 
 # ---------- tool section ----------
 def tabs(lang,mode):
@@ -215,7 +259,7 @@ def faq_html(lang,items,heic=False):
 def i18n_block(lang):
     """UI strings for assets/app.js as a JSON data block (type=application/json is never executed, so CSP script-src
     'self' is unaffected). U+00A0 of visible ru strings is written as the escape \\u00a0, never as a raw character."""
-    keys=[k for k in UI[lang] if not k.startswith(('licenses_','f_','foot','mode_','drop','h1_','lede','err_heic_'))]  # err_heic_*: jpg-to-pdf data attributes only
+    keys=[k for k in UI[lang] if not k.startswith(('licenses_','f_','foot','mode_','drop','h1_','lede','err_heic_','ft_','crumbs_','about_','merge_'))]  # err_heic_*: jpg-to-pdf data attributes only
     d={k:UI[lang][k] for k in keys}
     j=json.dumps(d,ensure_ascii=False,sort_keys=True).replace(NB,'\\u00a0').replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     return f'<script type="application/json" id="i18n">{j}</script>\n'
@@ -227,14 +271,17 @@ def tool_page(lang,page,key,mode):
     ld=[{'@context':'https://schema.org','@type':'WebApplication','name':'Local PDF Tools','description':plain(s['meta']),'url':url(lang,page),'inLanguage':HREFLANG[lang],
          'applicationCategory':'UtilitiesApplication','operatingSystem':'Any','browserRequirements':'Requires JavaScript','isAccessibleForFree':True,'offers':{'@type':'Offer','price':'0','priceCurrency':'USD'}}]
     ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':faq_plain(x['a'])}} for x in faqs]})
+    ld.append(crumbs_ld(lang,page))
     P='' if lang=='en' else '../'
     attrs=(heic_attrs(lang) if mode=='images' else '')+f' data-lang="{HREFLANG[lang]}" data-worker="{P}assets/worker.js" data-pdfjs="{P}assets/vendor/pdf.min.js" data-pdfjs-worker="{P}assets/vendor/pdf.worker.min.js"'
-    out=head(T,lang,page,s['title'],s['meta'],jsonld(ld),attrs)
+    out=head(T,lang,page,s['title'],s['meta'],jsonld(ld),attrs,crumbs=crumbs_html(lang,page))
     if hub:
         out+=(f'<section class="hero"><div class="hero-l"><h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(t["lede"])}</p>{dropzone(lang,"merge")}</div>{HERO_ART}</section>\n'
               +app(lang,mode,hub=True)+modecards(lang))
     else:
-        out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'+tabs(lang,mode)+app(lang,mode)+(heic_template(lang) if mode=='images' else ''))
+        out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'
+              +(merge_cross_html(lang) if page=='merge-pdf.html' else '')
+              +tabs(lang,mode)+app(lang,mode)+(heic_template(lang) if mode=='images' else ''))
     out+=faq_html(lang,faqs,heic=mode=='images')
     # task pages: H2 'Other PDF tools' (Nathan's other_tools) after the FAQ, same heading style, the 3 other tools only
     if not hub: out+=(f'<section class="others mt-12" aria-labelledby="others-h"><h2 id="others-h" class="text-2xl font-semibold">{e(t["other_tools"])}</h2><div class="mt-4">'
@@ -272,7 +319,7 @@ def privacy_page(lang):
     body=body.replace('Заявление о конфиденциальности GitHub','<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">Заявление о конфиденциальности GitHub</a>')
     body=body.replace('《GitHub 隐私声明》','<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">《GitHub 隐私声明》</a>')
     body=re.sub(r'(open an issue in the GitHub repository|создайте issue в\S? ?репозитории на\S? ?GitHub|在 GitHub 仓库中提交 issue)',lambda m:f'<a href="{REPO}/issues">{m.group(1)}</a>',body)
-    return head(T,lang,'privacy.html',t['privacy_title'],t['privacy_desc'],doc=True)+body+foot(lang,'privacy.html')
+    return head(T,lang,'privacy.html',t['privacy_title'],t['privacy_desc'],jsonld([crumbs_ld(lang,'privacy.html')]),doc=True,crumbs=crumbs_html(lang,'privacy.html'))+body+foot(lang,'privacy.html')
 
 def licenses_page(lang):
     t=T[lang]
@@ -281,7 +328,7 @@ def licenses_page(lang):
     body=(f'<h1 id="h1">{e(vis(lang,re.split(r' [–—] |｜| · ',t["licenses_title"])[0]))}</h1>\n<p>{e(t["licenses_body"])}</p>\n'
           f'<h2>{e(t["lic_h_libs"])}</h2><div class="overflow-x-auto"><table class="table"><thead><tr><th>{e(t["lic_col_pkg"])}</th><th>{e(t["lic_col_ver"])}</th><th>{e(t["lic_col_lic"])}</th></tr></thead><tbody>{rows}</tbody></table></div>\n'
           f'<h2>{e(t["lic_h_texts"])}</h2>\n{texts}')
-    return head(T,lang,'licenses.html',t['licenses_title'],t['licenses_desc'],doc=True)+body+foot(lang,'licenses.html')
+    return head(T,lang,'licenses.html',t['licenses_title'],t['licenses_desc'],jsonld([crumbs_ld(lang,'licenses.html')]),doc=True,crumbs=crumbs_html(lang,'licenses.html'))+body+foot(lang,'licenses.html')
 
 def load_libs():
     """Exact bundled libraries. Source of truth for the core's tree and its embedded notices = THIRD-PARTY.md of
@@ -337,6 +384,17 @@ def check_page(lang,p,s):
         assert s.count(heic_attrs(lang))==1, f'HEIC card link data missing in {lang}/{p}'
         assert s.count(heic_template(lang))==1, f'HEIC card strings template missing in {lang}/{p}'
         assert f'<a class="link link-primary" href="{heic_href(lang)}">' in s, f'HEIC FAQ link missing in {lang}/{p}'
+    assert 'PDF-инструменты' not in s.replace('\u2011','-'), f'PDF-инструменты left in {lang}/{p}'
+    ft=re.search(r'<nav class="ft"[^>]*>.*?</nav>',s,re.S)
+    assert ft and ft.group(0).count('<a href=')==7, f'7-link footer missing in {lang}/{p}'
+    assert '<nav class="crumbs"' in s and '<span aria-current="page">' in s, f'breadcrumbs missing in {lang}/{p}'
+    if p=='merge-pdf.html':
+        cx=re.search(r'<p class="cross[^"]*"[^>]*>.*?</p>',s,re.S)
+        assert cx and 'href="jpg-to-pdf.html"' in cx.group(0), f'merge-pdf contextual jpg-to-pdf link missing in {lang}/{p}'
+    if p in ('merge-pdf.html','split-pdf.html','organize-pdf.html'):
+        assert 'heic-to-jpg' not in s.split('<footer',1)[0], f'heic-to-jpg body link on {lang}/{p}'
+    for a in re.findall(r'aria-label="([^"]*)"',s):
+        assert NB not in html.unescape(a), f'U+00A0 in aria-label in {lang}/{p}'
     assert '\u2011' not in ''.join(re.findall(r'<head>.*?</head>|<[^>]*>|<script type="application/ld\+json">.*?</script>',s,re.S)), f'U+2011 in markup/meta in {lang}/{p}'
     m=BANNED.search(vis_txt); assert not m, f'banned word {m.group(0)!r} in {lang}/{p}'
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):
@@ -344,6 +402,11 @@ def check_page(lang,p,s):
         if d['@type']=='FAQPage':
             vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',s)]; va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',s)]
             assert vq==[q['name'] for q in d['mainEntity']] and va==[q['acceptedAnswer']['text'] for q in d['mainEntity']], f'FAQ JSON-LD != visible FAQ in {lang}/{p}'
+        if d['@type']=='BreadcrumbList':
+            vis_names=[html.unescape(re.sub(r'<[^>]+>','',x)).replace(NB,' ') for x in re.findall(r'<li>(.*?)</li>',re.search(r'<nav class="crumbs"[^>]*><ol>(.*?)</ol>',s,re.S).group(1))]
+            assert [x['name'] for x in d['itemListElement']]==vis_names, f'BreadcrumbList name != visible in {lang}/{p}'
+            assert all(x['item'].startswith('https://noclaudkit.com/') for x in d['itemListElement'])
+            assert NB not in j
 def selftest():
     bad='<script>alert(1)</script>'
     global T,SEO,FAQ
@@ -412,6 +475,7 @@ def gen_llms():
         files[page[:-5]+'.md']=out+tail
     # privacy: text of the generated en privacy page (already stripped of unverified claims there)
     ph=privacy_page('en'); body=ph.split('<main',1)[1].split('>',1)[1].split('</main>',1)[0]
+    body=re.sub(r'<nav class="crumbs"[^>]*>.*?</nav>\s*','',body,flags=re.S)
     body=re.sub(r'<a href="([^"]+)">(.*?)</a>',r'[\2](\1)',body)
     body=re.sub(r'<h1[^>]*>(.*?)</h1>',r'# \1\n\nHTML version: '+url('en','privacy.html')+'\n',body)
     body=re.sub(r'<h2[^>]*>(.*?)</h2>',r'## \1\n',body); body=re.sub(r'<b>(.*?)</b>',r'**\1**',body)

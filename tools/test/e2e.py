@@ -538,6 +538,23 @@ async def run(bname, p, tmp):
         ok(pre + f'TOO_MANY_FILES {l}: fix text plural for 1 file not added', tx == w1, (tx, w1))
         await pg.close()
 
+    # ---- interlinking AC10: no horizontal scroll at 280/320/375/768/1280, en/ru/zh, all 21 pages ----
+    IL_PAGES = ['', 'merge-pdf.html', 'split-pdf.html', 'organize-pdf.html', 'jpg-to-pdf.html', 'privacy.html', 'licenses.html']
+    overflow_bad = []
+    for lang in ('', 'ru/', 'zh/'):
+        for pth in IL_PAGES:
+            for wd in (280, 320, 375, 768, 1280):
+                pg = await newpage(ctx, wd, 800); w = Watch(pg, bname); watches.append(w)
+                await pg.goto(B + lang + pth); await pg.wait_for_load_state('load')
+                o = await overflow(pg)
+                brand = await pg.evaluate("""() => { const b = document.querySelector('.brand');
+                    const r = b.getBoundingClientRect(); const crumbs = document.querySelector('main .crumbs');
+                    return { wrap: Math.round(r.height) <= 44, crumbs: !!crumbs, header: !!document.querySelector('header .brand') && !!document.querySelector('header details.settings') }; }""")
+                if o > 0 or not brand['wrap'] or not brand['crumbs'] or not brand['header']:
+                    overflow_bad.append((lang + pth or 'hub', wd, o, brand))
+                await pg.close()
+    ok(pre + 'interlinking: no h-scroll at 280/320/375/768/1280 en/ru/zh, brand one line, crumbs in main', not overflow_bad, overflow_bad[:8])
+
     # ---- sitemap: 21 URLs, each with en/ru/zh/x-default alternates ----
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
     r = await pg.goto(B + 'sitemap.xml'); sx = await r.text()

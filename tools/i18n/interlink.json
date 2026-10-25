@@ -1,0 +1,41 @@
+{
+ "en": {
+  "f_pdf": "PDF tools",
+  "other_tools": "Other PDF tools",
+  "ft_home": "NoClaudKit",
+  "ft_all": "All tools",
+  "ft_heic": "HEIC to JPG",
+  "ft_merge": "Merge PDF",
+  "ft_split": "Split PDF",
+  "ft_jpg": "JPG to PDF",
+  "crumbs_aria": "Breadcrumb",
+  "about_aria": "About this site",
+  "merge_cross": "Need to combine photos? Convert them with {link}"
+ },
+ "ru": {
+  "f_pdf": "Инструменты для PDF",
+  "other_tools": "Другие инструменты для PDF",
+  "ft_home": "NoClaudKit",
+  "ft_all": "Все инструменты",
+  "ft_heic": "HEIC в JPG",
+  "ft_merge": "Объединить PDF",
+  "ft_split": "Разделить PDF",
+  "ft_jpg": "JPG в PDF",
+  "crumbs_aria": "Навигационная цепочка",
+  "about_aria": "О сайте",
+  "merge_cross": "Нужно объединить фото? Сначала преобразуйте их с помощью «{link}»."
+ },
+ "zh": {
+  "f_pdf": "PDF 工具",
+  "other_tools": "其他 PDF 工具",
+  "ft_home": "NoClaudKit",
+  "ft_all": "全部工具",
+  "ft_heic": "HEIC 转 JPG",
+  "ft_merge": "合并 PDF",
+  "ft_split": "拆分 PDF",
+  "ft_jpg": "图片转 PDF",
+  "crumbs_aria": "面包屑导航",
+  "about_aria": "关于本站",
+  "merge_cross": "需要合并照片？请先用「{link}」转换。"
+ }
+}
