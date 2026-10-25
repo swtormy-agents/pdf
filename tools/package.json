@@ -9,7 +9,8 @@
     "build:js": "node scripts/build-js.mjs",
     "check:js": "node scripts/build-js.mjs --check",
     "test:worker": "node test/worker-tag.mjs",
-    "check:licenses": "node scripts/check-licenses.mjs"
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "check:interlinking": "python3 test/check-interlinking.py"
   },
   "devDependencies": {
     "@local-pdf-tools/core": "git+https://github.com/swtormy-agents/pdf-tools.git#f694cd4f6338f2d22004f31bfbd5577350e5a280",

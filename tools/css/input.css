@@ -249,3 +249,22 @@
 html { --errs-h: 0px; }
 @media (max-width: 599px) { html.errs-open { --errs-h: calc(50vh + 12px); } .toast.toast-center { bottom: calc(var(--errs-h, 0px) + 0.75rem + env(safe-area-inset-bottom, 0px)); } }
 @media (max-width: 599px) and (max-height: 419.98px) { html.errs-open { --errs-h: calc(40vh + 12px); } }
+
+/* interlinking spec 2026-10 §3.4 footer, §3.5 breadcrumbs, §4 long h1 — existing self-hosted CSS only, no style= */
+h1 { overflow-wrap: break-word; hyphens: auto; }
+.ft { --fg: var(--color-base-content); }
+.ft h2 { font-size: .875rem; font-weight: 600; margin: 0 0 .5rem; color: color-mix(in oklab, var(--color-base-content) 80%, transparent); }
+.ft ul { list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr)); column-gap: 1rem; }
+.ft a { display: flex; align-items: center; min-height: 44px; overflow-wrap: anywhere; }
+.ft a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.ft a[aria-current="page"] { color: var(--fg); font-weight: 600; text-decoration: none; }
+.crumbs { font-size: .875rem; margin: 0 0 1rem; color: color-mix(in oklab, var(--color-base-content) 80%, transparent); }
+.crumbs ol { display: flex; flex-wrap: wrap; align-items: center; list-style: none; margin: 0; padding: 0; }
+.crumbs li + li::before { content: "/"; content: "/" / ""; padding: 0 6px; }
+.crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
+.crumbs [aria-current] { overflow-wrap: anywhere; }
+.about .flinks a { overflow-wrap: anywhere; }
+@media (max-width: 299px) {
+  header .navbar { padding-inline: 0.5rem; }
+}
