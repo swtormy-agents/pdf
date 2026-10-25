@@ -44,6 +44,37 @@ class Watch:
         elif m.type == 'error' and 'Content Security Policy' in m.text: s.csp.append(m.text[:60] + ' @' + s.page.url)
 INIT = "document.addEventListener('securitypolicyviolation',e=>console.error('CSPV '+e.violatedDirective+' '+e.blockedURI+' '+e.sourceFile+':'+e.lineNumber+' '+(e.sample||'').slice(0,80)))"
 
+# WebKit applies an inline style to its native <select> (jpg-to-pdf #psize) in
+# engine internals. That reports style-src-attr on any page with a <select> and
+# style-src 'self' — online and offline, including a bare two-line CSP page.
+# It is a WebKit engine bug, not a site inline style. Do not relax CSP; do not
+# refactor site CSS/JS for it. Only this triple is ignored: webkit +
+# style-src-attr + #psize / the jpg-to-pdf <select>.
+def site_csp_violations(items, engine, url=''):
+    bad = []
+    for v in items or []:
+        if isinstance(v, dict):
+            dirs = {v.get('violatedDirective') or '', v.get('effectiveDirective') or ''}
+            src_id = v.get('targetId') or ''
+            src_tag = (v.get('targetTag') or '').lower()
+            page = v.get('page') or url
+            on_jpg = page.rstrip('/').endswith('jpg-to-pdf.html')
+            # target is #psize, the <select>, or unset (UA shadow — still that select)
+            from_psize = src_id == 'psize' or src_tag == 'select' or (on_jpg and not src_id and not src_tag)
+            allow = engine == 'webkit' and 'style-src-attr' in dirs and from_psize and (src_id == 'psize' or on_jpg)
+            if not allow:
+                bad.append(v)
+            continue
+        text = str(v)
+        allow = (
+            engine == 'webkit'
+            and 'style-src-attr' in text
+            and ('#psize' in text or 'psize' in text or url.rstrip('/').endswith('jpg-to-pdf.html'))
+        )
+        if not allow:
+            bad.append(v)
+    return bad
+
 async def newpage(ctx, w=1280, h=900):
     pg = await ctx.new_page(); await pg.set_viewport_size({'width': w, 'height': h}); return pg
 async def ready(pg):
@@ -681,6 +712,165 @@ async def run(bname, p, tmp):
                    tot < 0.01 and nri < 0.01 and not any(x.startswith('errs:') for x in srcs) and p0 == p1, (tot, nri, srcs, p0, p1))
                 await pg.close()
             print(f'  CLS stack {vw}x{vh} max over 10 runs: all={worst[0]:.4f} input-free={worst[1]:.4f}')
+
+    # ---- v1.1: mode tabs no overflow 600–640; hub page scroll 0; offline card; focus after add; JSON-LD; zh metas ----
+    for lang, path in (('', 'merge-pdf.html'), ('ru/', 'ru/merge-pdf.html'), ('zh/', 'zh/merge-pdf.html')):
+        for wd in (600, 604, 608, 620, 639, 640):
+            pg = await newpage(ctx, wd, 800); w = Watch(pg, bname); watches.append(w)
+            await pg.goto(B + path); await ready(pg)
+            g = await pg.evaluate("""() => { const t = document.querySelector('.tabs.modetabs');
+                return [getComputedStyle(t).display, t.scrollWidth - t.clientWidth]; }""")
+            want = 'grid' if wd < 640 else 'flex'
+            ok(pre + f'tabs {lang or "en/"} {wd}: display {want}, no overflow', g[0] == want and g[1] == 0, g)
+            await pg.close()
+    for lang, path in (('', ''), ('ru/', 'ru/'), ('zh/', 'zh/')):
+        for wd in (600, 768, 1024, 1279):
+            pg = await newpage(ctx, wd, 800); w = Watch(pg, bname); watches.append(w)
+            await pg.goto(B + path); await pg.wait_for_load_state('load')
+            o = await pg.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth')
+            ok(pre + f'hub page scroll {lang or "en/"} {wd}: 0', o == 0, o)
+            await pg.close()
+
+    pg = await newpage(ctx, 375, 800); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'organize-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'contract.pdf']); await loaded(pg)
+    foc = await pg.evaluate("""() => { const a = document.activeElement; const li = a && a.closest('#pages > .pc');
+        return [!!li, a && a.getClientRects().length > 0, a && (a.classList.contains('pick') || a.dataset.act === 'del')]; }""")
+    ok(pre + 'focus after add at 375: visible card (not a hidden .pick)', foc[0] and foc[1] and foc[2], foc)
+    await pg.close()
+
+    bad_ld, bad_zh = [], []
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    for lang in ('', 'ru/', 'zh/'):
+        for pth in ('', 'merge-pdf.html', 'split-pdf.html', 'organize-pdf.html', 'jpg-to-pdf.html'):
+            await pg.goto(B + lang + pth); await pg.wait_for_load_state('load')
+            name = await pg.evaluate("""() => { const ld = [...document.querySelectorAll('script[type="application/ld+json"]')].map(x => JSON.parse(x.textContent)).find(x => x['@type'] === 'WebApplication');
+                return ld ? ld.name : null; }""")
+            if name != 'Local PDF Tools': bad_ld.append((lang + pth, name))
+        if lang == 'zh/':
+            for pth in ('', 'merge-pdf.html', 'split-pdf.html', 'organize-pdf.html', 'jpg-to-pdf.html', 'privacy.html', 'licenses.html'):
+                await pg.goto(B + 'zh/' + pth); await pg.wait_for_load_state('load')
+                metas = await pg.evaluate("""() => ({
+                    device: (document.querySelector('meta[name="applicable-device"]') || {}).content || null,
+                    cache: (document.querySelector('meta[http-equiv="Cache-Control"]') || {}).content || null,
+                    clang: (document.querySelector('meta[http-equiv="Content-Language"]') || {}).content || null,
+                    href: !!document.querySelector('link[rel="alternate"][hreflang="zh-Hans"]')
+                })""")
+                if not (metas['device'] == 'pc,mobile' and metas['cache'] == 'no-transform' and metas['clang'] == 'zh-CN' and metas['href']):
+                    bad_zh.append((pth, metas))
+    ok(pre + 'JSON-LD WebApplication name is Local PDF Tools on every tool page', not bad_ld, bad_ld)
+    ok(pre + 'zh metas: applicable-device, Cache-Control, Content-Language; hreflang kept', not bad_zh, bad_zh)
+    lic_desc = {
+        '': src['en']['licenses_desc'],
+        'ru/': src['ru']['licenses_desc'],
+        'zh/': src['zh']['licenses_desc'],
+    }
+    want_lic = {
+        '': 'Open-source licences and attributions for Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI and the standard font metrics.',
+        'ru/': 'Лицензии и атрибуция открытых библиотек в Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI и метрики стандартных шрифтов.',
+        'zh/': 'Local PDF Tools 的开源许可证与署名：pdf-lib、pdf.js、pako、Tailwind CSS、daisyUI 及标准字体度量数据。',
+    }
+    bad_lic = []
+    for lang, want in want_lic.items():
+        await pg.goto(B + lang + 'licenses.html'); await pg.wait_for_load_state('load')
+        got = await pg.evaluate("""() => ({
+            meta: (document.querySelector('meta[name="description"]') || {}).content || '',
+            og: (document.querySelector('meta[property="og:description"]') || {}).content || '',
+            html: document.documentElement.outerHTML
+        })""")
+        if got['meta'] != want or got['og'] != want or 'TODO' in got['html'] or '\u00a0' in got['meta'] or lic_desc[lang] != want:
+            bad_lic.append((lang or 'en/', got['meta'], got['og'], 'TODO' in got['html']))
+    ok(pre + 'licenses: meta + og:description match final texts, no TODO in HTML', not bad_lic, bad_lic)
+    await pg.close()
+
+    # Firefox: focus rings stay visible (outline 2px / offset 2px) on tabs, drop, cards, .ib, Undo
+    pg = await newpage(ctx, 1280, 800); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+    tab_ring = await pg.evaluate("""() => { const t = document.querySelector('.tabs.modetabs > .tab'); t.focus({ focusVisible: true });
+        const cs = getComputedStyle(t); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset]; }""")
+    drop_ring = await pg.evaluate("""() => { const d = document.querySelector('.drop'); const inp = document.getElementById('files'); inp.focus({ focusVisible: true });
+        const cs = getComputedStyle(d); return [cs.outlineStyle, cs.outlineWidth]; }""")
+    ok(pre + 'focus ring: mode tab outline 2px', tab_ring[0] != 'none' and tab_ring[1] == '2px', tab_ring)
+    ok(pre + 'focus ring: drop zone :focus-within outline 2px', drop_ring[0] != 'none' and drop_ring[1] == '2px', drop_ring)
+    await pg.set_input_files('#files', [FX + 'contract.pdf']); await loaded(pg)
+    card_ring = await pg.evaluate("""() => { const a = document.querySelector('.mcard') || document.querySelector('#pages > .pc .pick, #pages > .pc [data-act=del]');
+        if (!a) return null; a.focus({ focusVisible: true }); const cs = getComputedStyle(a); return [cs.outlineStyle, cs.outlineWidth, a.getClientRects().length > 0]; }""")
+    ok(pre + 'focus ring: card/page control outline visible', card_ring and card_ring[0] != 'none' and card_ring[1] == '2px' and card_ring[2], card_ring)
+    await pg.locator('#pages > .pc').nth(0).locator('[data-act=del]').click(); await pg.wait_for_selector('#toast:not([hidden])')
+    undo_ring = await pg.evaluate("""() => { const u = document.querySelector('#toast button'); u.focus({ focusVisible: true });
+        const cs = getComputedStyle(u); return [cs.outlineStyle, cs.outlineWidth]; }""")
+    ok(pre + 'focus ring: Undo button outline 2px', undo_ring[0] != 'none' and undo_ring[1] == '2px', undo_ring)
+    await pg.close()
+    pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
+    await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'broken.pdf']); await pg.wait_for_selector('#errs .ecard'); await pg.wait_for_selector('#proc', state='hidden')
+    ib_ring = await pg.evaluate("""() => { const b = document.querySelector('#errs .ib'); b.focus({ focusVisible: true });
+        const cs = getComputedStyle(b); return [cs.outlineStyle, cs.outlineWidth]; }""")
+    ok(pre + 'focus ring: error-card .ib outline 2px', ib_ring[0] != 'none' and ib_ring[1] == '2px', ib_ring)
+    await pg.close()
+
+    # offline card: set_offline before worker load; recovery; fail on any
+    # securitypolicyviolation / console CSP except the WebKit #psize engine bug
+    # (see site_csp_violations). CSP itself is not relaxed.
+    OFF_INIT = INIT + """;window.__cspv=[];document.addEventListener('securitypolicyviolation',e=>window.__cspv.push({
+        violatedDirective:e.violatedDirective,effectiveDirective:e.effectiveDirective,
+        blockedURI:e.blockedURI,sample:(e.sample||'').slice(0,80),
+        targetId:e.target&&e.target.id||'',targetTag:e.target&&e.target.tagName||'',
+        page:location.pathname}))"""
+    src_en = json.load(open(f'{HERE}/../i18n/en.json', encoding='utf-8'))
+    for path, fx, n_pages in (('merge-pdf.html', 'contract.pdf', 3), ('jpg-to-pdf.html', 'plain.png', 1)):
+        for off_w, off_h in ((1280, 900), (320, 800)):
+            c_off = await browser.new_context(accept_downloads=True); await c_off.add_init_script(OFF_INIT)
+            pg = await newpage(c_off, off_w, off_h); w = Watch(pg, bname); watches.append(w)
+            await pg.goto(B + path); await ready(pg)
+            await c_off.set_offline(True)
+            await pg.set_input_files('#files', [FX + fx])
+            await pg.wait_for_selector('#errs .ecard', timeout=15000)
+            off = await pg.evaluate("""() => { const c = document.querySelector('#errs .ecard');
+                const a = document.activeElement;
+                const siteStyle = !!(document.documentElement.getAttribute('style') || document.body.getAttribute('style')
+                    || document.querySelector('#errs[style], #errs [style]'));
+                return { code: c && c.dataset.code, role: document.getElementById('errs').getAttribute('role'),
+                         codes: [...document.querySelectorAll('#errs .ecard')].map(x => x.dataset.code),
+                         focusClose: !!(a && a.classList.contains('ib') && c && c.contains(a)),
+                         title: c ? c.querySelector('.et').textContent : '',
+                         cspv: window.__cspv || [], siteStyle }; }""")
+            tag = f' {path} {off_w}x{off_h}'
+            url = B + path
+            csp_now = site_csp_violations(off['cspv'], bname, url) + site_csp_violations(w.csp, bname, url)
+            ok(pre + f'offline{tag}: set_offline before worker → OFFLINE card, focus on close, no FAILED',
+               off['code'] == 'OFFLINE' and off['codes'] == ['OFFLINE'] and off['focusClose'] and off['role'] == 'alert'
+               and off['title'] == src_en['err_offline'] and not w.errors, off)
+            ok(pre + f'offline{tag}: no site CSP (securitypolicyviolation / console); WebKit #psize style-src-attr allowed',
+               not csp_now and not off['siteStyle'], (csp_now, off['siteStyle'], off['cspv'], w.csp))
+            await pg.click('#errs .ecard .ib'); await pg.wait_for_timeout(100)
+            ok(pre + f'offline{tag}: close button removes the card', await pg.locator('#errs .ecard').count() == 0)
+            await pg.set_input_files('#files', [FX + fx]); await pg.wait_for_selector('#errs .ecard[data-code=OFFLINE]')
+            await c_off.set_offline(False)
+            await pg.wait_for_function("!document.querySelector('#errs [data-code=OFFLINE]')", timeout=1000)
+            done_hidden = await pg.evaluate("document.getElementById('done').hidden")
+            after = await pg.evaluate("""() => ({ cspv: window.__cspv || [],
+                siteStyle: !!(document.documentElement.getAttribute('style') || document.body.getAttribute('style')
+                    || document.querySelector('#errs[style], #errs [style]')) })""")
+            csp_after = site_csp_violations(after['cspv'], bname, url) + site_csp_violations(w.csp, bname, url)
+            ok(pre + f'offline{tag}: online event removes card within 1s, job not auto-started',
+               await pg.locator('#errs .ecard').count() == 0 and done_hidden, done_hidden)
+            ok(pre + f'offline{tag}: still no site CSP after recovery',
+               not csp_after and not after['siteStyle'], (csp_after, after, w.csp))
+            await pg.set_input_files('#files', [FX + fx]); await loaded(pg)
+            ok(pre + f'offline{tag}: after recovery, adding files works without reload',
+               await pg.locator('#pages > .pc').count() == n_pages and await pg.is_visible('#work'))
+            await pg.close(); await c_off.close()
+
+    c_brk = await browser.new_context(accept_downloads=True); await c_brk.add_init_script(INIT)
+    pg = await newpage(c_brk); w = Watch(pg, bname)  # not in watches: a 404 worker script is an expected load error
+    await pg.route('**/pdf/assets/worker.js', lambda r: r.fulfill(status=404, body='nope'))
+    await pg.goto(B + 'merge-pdf.html'); await ready(pg)
+    await pg.set_input_files('#files', [FX + 'contract.pdf'])
+    await pg.wait_for_selector('#errs .ecard', timeout=15000)
+    brk = await pg.eval_on_selector_all('#errs .ecard', 'e => e.map(x => x.dataset.code)')
+    ok(pre + 'offline: broken worker URL online → err_failed, not OFFLINE', brk == ['FAILED'], brk)
+    await pg.close(); await c_brk.close()
 
     # ---- layout: every page, 320/375/1280, light/dark; header/brand gap ----
     for scheme in ('light', 'dark'):

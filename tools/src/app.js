@@ -72,10 +72,10 @@ function init() {
   const input = $('files'), drop = $('drop'), errs = $('errs'), work = $('work'), list = $('pages'), go = $('go');
   const proc = $('proc'), done = $('done'), live = $('live'), toast = $('toast'), confirmDlg = $('confirm');
   const counts = $('counts');
-  // <600px the error stack is fixed at the bottom: publish its height as --errs-h (0 when empty or static) so CSS can reserve room
+  // <600px the error stack is fixed at the bottom: toggle .errs-open so CSS can set --errs-h (no element.style / CSP style-src-attr)
   const setErrsH = () => {
-    const h = getComputedStyle(errs).position === 'fixed' && errs.children.length ? Math.ceil(errs.getBoundingClientRect().height) + 12 : 0;
-    document.documentElement.style.setProperty('--errs-h', h + 'px');
+    const on = getComputedStyle(errs).position === 'fixed' && errs.children.length > 0;
+    document.documentElement.classList.toggle('errs-open', on);
   };
   if (window.ResizeObserver) new ResizeObserver(setErrsH).observe(errs);
   matchMedia('(max-width: 599px)').addEventListener('change', setErrsH);
@@ -100,7 +100,8 @@ function init() {
   let worker = null, jobs = new Map(), jobSeq = 1;
   function getWorker() {
     if (worker) return worker;
-    worker = new Worker(assetUrl('worker'));
+    try { worker = new Worker(assetUrl('worker')); }
+    catch (e) { throw { code: navigator.onLine ? 'FAILED' : 'OFFLINE' }; }
     worker.onmessage = (ev) => {
       const m = ev.data, j = jobs.get(m.id);
       if (!j) return;
@@ -108,14 +109,19 @@ function init() {
       jobs.delete(m.id);
       if (m.error) j.reject(m.error); else j.resolve(m.result);
     };
-    worker.onerror = () => { for (const j of jobs.values()) j.reject({ code: 'FAILED' }); jobs.clear(); };
+    worker.onerror = () => {
+      const code = navigator.onLine ? 'FAILED' : 'OFFLINE';
+      if (code === 'OFFLINE') { worker.terminate(); worker = null; }
+      for (const j of jobs.values()) j.reject({ code }); jobs.clear();
+    };
     return worker;
   }
   function run(msg, onProgress, transfer = []) {
     return new Promise((resolve, reject) => {
       const id = jobSeq++;
       jobs.set(id, { resolve, reject, onProgress });
-      getWorker().postMessage({ id, ...msg }, transfer);
+      try { getWorker().postMessage({ id, ...msg }, transfer); }
+      catch (e) { jobs.delete(id); reject(e && e.code ? e : { code: navigator.onLine ? 'FAILED' : 'OFFLINE' }); }
     });
   }
   function killWorker() {
@@ -128,7 +134,10 @@ function init() {
   // ---------- pdf.js previews ----------
   let pdfjsP = null;
   function pdfjs() {
-    if (!pdfjsP) pdfjsP = import(assetUrl('pdfjs')).then((lib) => { lib.GlobalWorkerOptions.workerSrc = assetUrl('pdfjsWorker'); return lib; });
+    if (!pdfjsP) {
+      pdfjsP = import(assetUrl('pdfjs')).then((lib) => { lib.GlobalWorkerOptions.workerSrc = assetUrl('pdfjsWorker'); return lib; })
+        .catch((e) => { pdfjsP = null; throw navigator.onLine ? e : { code: 'OFFLINE' }; });
+    }
     return pdfjsP;
   }
   const docs = new Map(); // file id -> Promise<PDFDocumentProxy>
@@ -168,7 +177,10 @@ function init() {
         const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
         if (blob && pages.some((x) => x.k === k)) setThumb(k, URL.createObjectURL(blob));
         page.cleanup();
-      } catch { const li = nodes.get(k); if (li) li.querySelector('.th').classList.remove('sk'); }
+      } catch (e) {
+        const li = nodes.get(k); if (li) li.querySelector('.th').classList.remove('sk');
+        if (e && e.code === 'OFFLINE') showOffline();
+      }
     });
   }
   function setThumb(k, url) {
@@ -228,9 +240,18 @@ function init() {
       case 'SPLIT_TOTAL_PAGES': return card(t('err_split_total_pages'), t('err_split_total_pages_fix'), { code });
       case 'SPLIT_PARTS': return card(t('err_split_parts'), t('err_split_parts_fix'), { code });
       case 'PAGE_RANGE': return card(t('err_range'), t('err_range_fix', { n: num(extra.n || 0) }, extra.n || 0), { code });
+      case 'OFFLINE': return card(t('err_offline'), t('err_offline_fix'), { code });
       default: return card(t('err_failed'), t('err_failed_fix'), { code: 'FAILED' });
     }
   }
+  function showOffline() {
+    errs.querySelectorAll('[data-code=OFFLINE]').forEach((c) => c.remove());
+    errFor('OFFLINE');
+    const ib = errs.lastElementChild && errs.lastElementChild.querySelector('.ib');
+    if (ib) ib.focus();
+  }
+  function needsWorker() { return !worker; }
+  function offlineNow() { return !navigator.onLine && needsWorker(); }
 
   // ---------- adding files ----------
   const isPdfMode = MODE !== 'images';
@@ -241,6 +262,7 @@ function init() {
   }
   async function addFiles(fl) {
     if (busy || !fl.length) return;
+    if (offlineNow()) { showOffline(); return; }
     let incoming = [...fl];
     if (MODE === 'split') {
       if (incoming.length > 1) card(t('err_split_one'), t('err_split_one_fix', { file: shortName(incoming[0].name) }), { note: true, full: incoming[0].name, code: 'SPLIT_ONE' });
@@ -288,6 +310,7 @@ function init() {
         }
       } catch (e) {
         if (e && e.code === 'CANCELLED') break;
+        if (e && e.code === 'OFFLINE') { showOffline(); hideProc(); setBusy(false); return; }
         errFor(e && e.code, f, { reason: e && e.details && e.details.reason });
       }
     }
@@ -304,9 +327,8 @@ function init() {
   }
   function focusFirstNew(f) {
     const p = pages.find((x) => x.f === f.id);
-    const li = p && nodes.get(p.k);
     if (MODE === 'split') { const r = document.querySelector('input[name=smode]:checked'); if (r) r.focus(); return; }
-    if (li) { setRoving(p.k); li.querySelector('.pick').focus({ preventScroll: false }); }
+    if (p) focusCard(p.k);
   }
   function resetFiles() {
     files = []; pages = []; extractSel = new Set(); picked = null;
@@ -758,6 +780,7 @@ function init() {
   go.addEventListener('click', start);
   async function start() {
     if (busy || go.disabled) return;
+    if (offlineNow()) { showOffline(); return; }
     setBusy(true);
     work.hidden = true; errs.querySelectorAll('[data-code=FAILED]').forEach((c) => c.remove());
     const title = { merge: 'proc_merge', organize: 'proc_reorder', images: 'proc_images', split: 'proc_split' }[MODE];
@@ -787,6 +810,7 @@ function init() {
     } catch (e) {
       hideProc(); work.hidden = false;
       if (e && e.code === 'CANCELLED') { announce(t('proc_cancelled')); flash(t('proc_cancelled')); go.focus(); }
+      else if (e && e.code === 'OFFLINE') { showOffline(); }
       else {
         const d = (e && e.details) || {};
         // which file failed: images -> page index; build -> fileId tagged by the worker; split or one file -> that file
@@ -826,6 +850,15 @@ function init() {
   // ---------- live region ----------
   let liveT = null;
   function announce(msg) { clearTimeout(liveT); live.textContent = ''; liveT = setTimeout(() => { live.textContent = msg; }, 50); }
+
+  window.addEventListener('online', () => {
+    const c = errs.querySelector('[data-code=OFFLINE]'); if (!c) return;
+    c.remove();
+    // re-try loading only; do NOT auto-run the user's job
+    try { getWorker(); } catch {}
+    pdfjs().then(() => render()).catch(() => {});
+    if (go && !go.disabled) go.focus(); else input.focus();
+  });
 
   render();
   // test hook for QA (no network, no data): lets Playwright confirm the app booted

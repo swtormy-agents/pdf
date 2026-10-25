@@ -124,7 +124,7 @@
  "f_contact": "联系我们",
  "f_lic": "许可证",
  "licenses_title": "许可证与署名｜Local PDF Tools",
- "licenses_desc": "Local PDF Tools 使用的开源库：用于生成 PDF 的 pdf-lib（MIT）和用于页面预览的 pdf.js（Apache-2.0）。",
+ "licenses_desc": "Local PDF Tools 的开源许可证与署名：pdf-lib、pdf.js、pako、Tailwind CSS、daisyUI 及标准字体度量数据。",
  "licenses_body": "Local PDF Tools 采用 MIT 许可证。第三方组件及其许可证列于下方。",
  "faq_h": "常见问题",
  "aria_split": "拆分方式",
@@ -178,5 +178,7 @@
  "err_split_one": "拆分一次只能处理一个 PDF",
  "err_split_one_fix": "已使用第一个文件：{file}。",
  "err_failed": "无法保存 PDF",
- "err_failed_fix": "请重试。如果仍然不行，请刷新页面。"
+ "err_failed_fix": "请重试。如果仍然不行，请刷新页面。",
+ "err_offline": "您已离线，工具无法加载",
+ "err_offline_fix": "请连接互联网。恢复联网后，我们会立即重新加载工具。您的文件始终保留在此设备上。"
 }

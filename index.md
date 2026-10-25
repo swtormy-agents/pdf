@@ -35,7 +35,7 @@ No. The tool does not open password-protected or encrypted PDFs and shows a clea
 
 ### What is Local PDF Tools built with?
 
-It uses open-source libraries, including pdf-lib (MIT license) to create the PDF files and pdf.js (Apache-2.0 license) to show page previews. Both are served from our own site, with no third-party scripts and no cookies.
+It uses open-source libraries, including pdf-lib (MIT licence) to create the PDF files and pdf.js (Apache-2.0 licence) to show page previews. Both are served from our own site, with no third-party scripts and no cookies.
 
 Free and open source. Files stay on your device: no uploads, no cookies, no ads.
 

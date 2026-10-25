@@ -146,7 +146,7 @@
  "f_contact": "Contact",
  "f_lic": "Licences",
  "licenses_title": "Licences and attributions – Local PDF Tools",
- "licenses_desc": "Open-source libraries used by Local PDF Tools: pdf-lib (MIT) for creating PDFs and pdf.js (Apache-2.0) for page previews.",
+ "licenses_desc": "Open-source licences and attributions for Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI and the standard font metrics.",
  "licenses_body": "Local PDF Tools is MIT-licensed. Third-party components and their licences are listed below.",
  "faq_h": "Questions and answers",
  "aria_split": "How to split",
@@ -203,5 +203,7 @@
  "err_split_one": "Split works with one PDF",
  "err_split_one_fix": "We used the first file: {file}.",
  "err_failed": "We couldn't save the PDF",
- "err_failed_fix": "Try again. If that doesn't help, reload the page."
+ "err_failed_fix": "Try again. If that doesn't help, reload the page.",
+ "err_offline": "You’re offline, so the tool can’t load",
+ "err_offline_fix": "Connect to the internet. We’ll reload the tool as soon as you’re back online. Your files stay on this device."
 }
