@@ -139,7 +139,7 @@
  "f_contact": "Связаться",
  "f_lic": "Лицензии",
  "licenses_title": "Лицензии и атрибуция — Local PDF Tools",
- "licenses_desc": "TODO(Nathan): licences meta ru",
+ "licenses_desc": "Лицензии и атрибуция открытых библиотек в Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI и метрики стандартных шрифтов.",
  "licenses_body": "Local PDF Tools распространяется по лицензии MIT. Сторонние компоненты и их лицензии перечислены ниже.",
  "faq_h": "Вопросы и ответы",
  "aria_split": "Как разделить",

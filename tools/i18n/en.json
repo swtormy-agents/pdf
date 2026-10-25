@@ -146,7 +146,7 @@
  "f_contact": "Contact",
  "f_lic": "Licences",
  "licenses_title": "Licences and attributions – Local PDF Tools",
- "licenses_desc": "TODO(Lucas): licences meta en",
+ "licenses_desc": "Open-source licences and attributions for Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI and the standard font metrics.",
  "licenses_body": "Local PDF Tools is MIT-licensed. Third-party components and their licences are listed below.",
  "faq_h": "Questions and answers",
  "aria_split": "How to split",

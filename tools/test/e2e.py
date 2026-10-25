@@ -44,6 +44,37 @@ class Watch:
         elif m.type == 'error' and 'Content Security Policy' in m.text: s.csp.append(m.text[:60] + ' @' + s.page.url)
 INIT = "document.addEventListener('securitypolicyviolation',e=>console.error('CSPV '+e.violatedDirective+' '+e.blockedURI+' '+e.sourceFile+':'+e.lineNumber+' '+(e.sample||'').slice(0,80)))"
 
+# WebKit applies an inline style to its native <select> (jpg-to-pdf #psize) in
+# engine internals. That reports style-src-attr on any page with a <select> and
+# style-src 'self' — online and offline, including a bare two-line CSP page.
+# It is a WebKit engine bug, not a site inline style. Do not relax CSP; do not
+# refactor site CSS/JS for it. Only this triple is ignored: webkit +
+# style-src-attr + #psize / the jpg-to-pdf <select>.
+def site_csp_violations(items, engine, url=''):
+    bad = []
+    for v in items or []:
+        if isinstance(v, dict):
+            dirs = {v.get('violatedDirective') or '', v.get('effectiveDirective') or ''}
+            src_id = v.get('targetId') or ''
+            src_tag = (v.get('targetTag') or '').lower()
+            page = v.get('page') or url
+            on_jpg = page.rstrip('/').endswith('jpg-to-pdf.html')
+            # target is #psize, the <select>, or unset (UA shadow — still that select)
+            from_psize = src_id == 'psize' or src_tag == 'select' or (on_jpg and not src_id and not src_tag)
+            allow = engine == 'webkit' and 'style-src-attr' in dirs and from_psize and (src_id == 'psize' or on_jpg)
+            if not allow:
+                bad.append(v)
+            continue
+        text = str(v)
+        allow = (
+            engine == 'webkit'
+            and 'style-src-attr' in text
+            and ('#psize' in text or 'psize' in text or url.rstrip('/').endswith('jpg-to-pdf.html'))
+        )
+        if not allow:
+            bad.append(v)
+    return bad
+
 async def newpage(ctx, w=1280, h=900):
     pg = await ctx.new_page(); await pg.set_viewport_size({'width': w, 'height': h}); return pg
 async def ready(pg):
@@ -729,6 +760,27 @@ async def run(bname, p, tmp):
                     bad_zh.append((pth, metas))
     ok(pre + 'JSON-LD WebApplication name is Local PDF Tools on every tool page', not bad_ld, bad_ld)
     ok(pre + 'zh metas: applicable-device, Cache-Control, Content-Language; hreflang kept', not bad_zh, bad_zh)
+    lic_desc = {
+        '': src['en']['licenses_desc'],
+        'ru/': src['ru']['licenses_desc'],
+        'zh/': src['zh']['licenses_desc'],
+    }
+    want_lic = {
+        '': 'Open-source licences and attributions for Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI and the standard font metrics.',
+        'ru/': 'Лицензии и атрибуция открытых библиотек в Local PDF Tools: pdf-lib, pdf.js, pako, Tailwind CSS, daisyUI и метрики стандартных шрифтов.',
+        'zh/': 'Local PDF Tools 的开源许可证与署名：pdf-lib、pdf.js、pako、Tailwind CSS、daisyUI 及标准字体度量数据。',
+    }
+    bad_lic = []
+    for lang, want in want_lic.items():
+        await pg.goto(B + lang + 'licenses.html'); await pg.wait_for_load_state('load')
+        got = await pg.evaluate("""() => ({
+            meta: (document.querySelector('meta[name="description"]') || {}).content || '',
+            og: (document.querySelector('meta[property="og:description"]') || {}).content || '',
+            html: document.documentElement.outerHTML
+        })""")
+        if got['meta'] != want or got['og'] != want or 'TODO' in got['html'] or '\u00a0' in got['meta'] or lic_desc[lang] != want:
+            bad_lic.append((lang or 'en/', got['meta'], got['og'], 'TODO' in got['html']))
+    ok(pre + 'licenses: meta + og:description match final texts, no TODO in HTML', not bad_lic, bad_lic)
     await pg.close()
 
     # Firefox: focus rings stay visible (outline 2px / offset 2px) on tabs, drop, cards, .ib, Undo
@@ -757,37 +809,58 @@ async def run(bname, p, tmp):
     ok(pre + 'focus ring: error-card .ib outline 2px', ib_ring[0] != 'none' and ib_ring[1] == '2px', ib_ring)
     await pg.close()
 
-    # offline card: set_offline before worker load; recovery; broken worker URL online → FAILED
-    c_off = await browser.new_context(accept_downloads=True); await c_off.add_init_script(INIT)
-    pg = await newpage(c_off); w = Watch(pg, bname); watches.append(w)
-    await pg.goto(B + 'merge-pdf.html'); await ready(pg)
-    await c_off.set_offline(True)
-    await pg.set_input_files('#files', [FX + 'contract.pdf'])
-    await pg.wait_for_selector('#errs .ecard', timeout=15000)
-    off = await pg.evaluate("""() => { const c = document.querySelector('#errs .ecard');
-        const a = document.activeElement;
-        return { code: c && c.dataset.code, role: document.getElementById('errs').getAttribute('role'),
-                 codes: [...document.querySelectorAll('#errs .ecard')].map(x => x.dataset.code),
-                 focusClose: !!(a && a.classList.contains('ib') && c && c.contains(a)),
-                 title: c ? c.querySelector('.et').textContent : '' }; }""")
+    # offline card: set_offline before worker load; recovery; fail on any
+    # securitypolicyviolation / console CSP except the WebKit #psize engine bug
+    # (see site_csp_violations). CSP itself is not relaxed.
+    OFF_INIT = INIT + """;window.__cspv=[];document.addEventListener('securitypolicyviolation',e=>window.__cspv.push({
+        violatedDirective:e.violatedDirective,effectiveDirective:e.effectiveDirective,
+        blockedURI:e.blockedURI,sample:(e.sample||'').slice(0,80),
+        targetId:e.target&&e.target.id||'',targetTag:e.target&&e.target.tagName||'',
+        page:location.pathname}))"""
     src_en = json.load(open(f'{HERE}/../i18n/en.json', encoding='utf-8'))
-    ok(pre + 'offline: set_offline before worker → OFFLINE card, focus on close, no FAILED',
-       off['code'] == 'OFFLINE' and off['codes'] == ['OFFLINE'] and off['focusClose'] and off['role'] == 'alert'
-       and off['title'] == src_en['err_offline'] and not w.errors, off)
-    await pg.click('#errs .ecard .ib'); await pg.wait_for_timeout(100)
-    ok(pre + 'offline: close button removes the card', await pg.locator('#errs .ecard').count() == 0)
-    # show again, then come back online — card gone within 1s, no auto-run
-    await pg.set_input_files('#files', [FX + 'contract.pdf']); await pg.wait_for_selector('#errs .ecard[data-code=OFFLINE]')
-    await c_off.set_offline(False)
-    await pg.wait_for_function("!document.querySelector('#errs [data-code=OFFLINE]')", timeout=1000)
-    done_hidden = await pg.evaluate("document.getElementById('done').hidden")
-    work_after = await pg.evaluate("document.getElementById('work').hidden")
-    ok(pre + 'offline: online event removes card within 1s, job not auto-started',
-       await pg.locator('#errs .ecard').count() == 0 and done_hidden, (done_hidden, work_after))
-    await pg.set_input_files('#files', [FX + 'contract.pdf']); await loaded(pg)
-    ok(pre + 'offline: after recovery, adding files works without reload',
-       await pg.locator('#pages > .pc').count() == 3 and await pg.is_visible('#work'))
-    await pg.close(); await c_off.close()
+    for path, fx, n_pages in (('merge-pdf.html', 'contract.pdf', 3), ('jpg-to-pdf.html', 'plain.png', 1)):
+        for off_w, off_h in ((1280, 900), (320, 800)):
+            c_off = await browser.new_context(accept_downloads=True); await c_off.add_init_script(OFF_INIT)
+            pg = await newpage(c_off, off_w, off_h); w = Watch(pg, bname); watches.append(w)
+            await pg.goto(B + path); await ready(pg)
+            await c_off.set_offline(True)
+            await pg.set_input_files('#files', [FX + fx])
+            await pg.wait_for_selector('#errs .ecard', timeout=15000)
+            off = await pg.evaluate("""() => { const c = document.querySelector('#errs .ecard');
+                const a = document.activeElement;
+                const siteStyle = !!(document.documentElement.getAttribute('style') || document.body.getAttribute('style')
+                    || document.querySelector('#errs[style], #errs [style]'));
+                return { code: c && c.dataset.code, role: document.getElementById('errs').getAttribute('role'),
+                         codes: [...document.querySelectorAll('#errs .ecard')].map(x => x.dataset.code),
+                         focusClose: !!(a && a.classList.contains('ib') && c && c.contains(a)),
+                         title: c ? c.querySelector('.et').textContent : '',
+                         cspv: window.__cspv || [], siteStyle }; }""")
+            tag = f' {path} {off_w}x{off_h}'
+            url = B + path
+            csp_now = site_csp_violations(off['cspv'], bname, url) + site_csp_violations(w.csp, bname, url)
+            ok(pre + f'offline{tag}: set_offline before worker → OFFLINE card, focus on close, no FAILED',
+               off['code'] == 'OFFLINE' and off['codes'] == ['OFFLINE'] and off['focusClose'] and off['role'] == 'alert'
+               and off['title'] == src_en['err_offline'] and not w.errors, off)
+            ok(pre + f'offline{tag}: no site CSP (securitypolicyviolation / console); WebKit #psize style-src-attr allowed',
+               not csp_now and not off['siteStyle'], (csp_now, off['siteStyle'], off['cspv'], w.csp))
+            await pg.click('#errs .ecard .ib'); await pg.wait_for_timeout(100)
+            ok(pre + f'offline{tag}: close button removes the card', await pg.locator('#errs .ecard').count() == 0)
+            await pg.set_input_files('#files', [FX + fx]); await pg.wait_for_selector('#errs .ecard[data-code=OFFLINE]')
+            await c_off.set_offline(False)
+            await pg.wait_for_function("!document.querySelector('#errs [data-code=OFFLINE]')", timeout=1000)
+            done_hidden = await pg.evaluate("document.getElementById('done').hidden")
+            after = await pg.evaluate("""() => ({ cspv: window.__cspv || [],
+                siteStyle: !!(document.documentElement.getAttribute('style') || document.body.getAttribute('style')
+                    || document.querySelector('#errs[style], #errs [style]')) })""")
+            csp_after = site_csp_violations(after['cspv'], bname, url) + site_csp_violations(w.csp, bname, url)
+            ok(pre + f'offline{tag}: online event removes card within 1s, job not auto-started',
+               await pg.locator('#errs .ecard').count() == 0 and done_hidden, done_hidden)
+            ok(pre + f'offline{tag}: still no site CSP after recovery',
+               not csp_after and not after['siteStyle'], (csp_after, after, w.csp))
+            await pg.set_input_files('#files', [FX + fx]); await loaded(pg)
+            ok(pre + f'offline{tag}: after recovery, adding files works without reload',
+               await pg.locator('#pages > .pc').count() == n_pages and await pg.is_visible('#work'))
+            await pg.close(); await c_off.close()
 
     c_brk = await browser.new_context(accept_downloads=True); await c_brk.add_init_script(INIT)
     pg = await newpage(c_brk); w = Watch(pg, bname)  # not in watches: a 404 worker script is an expected load error

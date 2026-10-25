@@ -124,7 +124,7 @@
  "f_contact": "联系我们",
  "f_lic": "许可证",
  "licenses_title": "许可证与署名｜Local PDF Tools",
- "licenses_desc": "TODO(Nathan): licences meta zh",
+ "licenses_desc": "Local PDF Tools 的开源许可证与署名：pdf-lib、pdf.js、pako、Tailwind CSS、daisyUI 及标准字体度量数据。",
  "licenses_body": "Local PDF Tools 采用 MIT 许可证。第三方组件及其许可证列于下方。",
  "faq_h": "常见问题",
  "aria_split": "拆分方式",

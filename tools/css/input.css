@@ -113,9 +113,9 @@
     .errs .ecard { @apply shadow-lg; }
     /* own solid backdrop so page text never shows through the gaps; base-200 separates the stack from the page in dark mode */
     .errs:not(:empty) { background: var(--color-base-200); padding: 0.5rem; border-radius: var(--radius-box); box-shadow: 0 -2px 12px rgb(0 0 0 / 0.45); }
-    /* reserve the stack height (--errs-h set by a ResizeObserver in app.js) plus iOS home-indicator inset */
+    /* --errs-h comes from html.errs-open below (class, not element.style — CSP style-src has no unsafe-inline) */
     body { padding-bottom: calc(var(--errs-h, 0px) + env(safe-area-inset-bottom, 0px)); }
-    html { scroll-padding-bottom: calc(var(--errs-h, 0px) + 0.75rem); }
+    html { scroll-padding-bottom: calc(var(--errs-h, 0px) + 0.75rem + env(safe-area-inset-bottom, 0px)); }
   }
   @media (max-width: 599px) and (max-height: 419.98px) { .errs { max-height: 40vh; } }
   .ecard { @apply flex items-start gap-3 rounded-box border border-error bg-base-100 p-3 sm:p-4; }
@@ -246,4 +246,6 @@
   .table thead th { @apply text-base-content/80; }
 }
 /* <600px: Undo toast sits above the error stack (Olivia 952e205 F3). Unlayered on purpose: the daisyui layer comes after components. */
-@media (max-width: 599px) { .toast.toast-center { bottom: calc(var(--errs-h, 0px) + 0.75rem + env(safe-area-inset-bottom)); } }
+html { --errs-h: 0px; }
+@media (max-width: 599px) { html.errs-open { --errs-h: calc(50vh + 12px); } .toast.toast-center { bottom: calc(var(--errs-h, 0px) + 0.75rem + env(safe-area-inset-bottom, 0px)); } }
+@media (max-width: 599px) and (max-height: 419.98px) { html.errs-open { --errs-h: calc(40vh + 12px); } }

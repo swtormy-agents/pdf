@@ -72,10 +72,10 @@ function init() {
   const input = $('files'), drop = $('drop'), errs = $('errs'), work = $('work'), list = $('pages'), go = $('go');
   const proc = $('proc'), done = $('done'), live = $('live'), toast = $('toast'), confirmDlg = $('confirm');
   const counts = $('counts');
-  // <600px the error stack is fixed at the bottom: publish its height as --errs-h (0 when empty or static) so CSS can reserve room
+  // <600px the error stack is fixed at the bottom: toggle .errs-open so CSS can set --errs-h (no element.style / CSP style-src-attr)
   const setErrsH = () => {
-    const h = getComputedStyle(errs).position === 'fixed' && errs.children.length ? Math.ceil(errs.getBoundingClientRect().height) + 12 : 0;
-    document.documentElement.style.setProperty('--errs-h', h + 'px');
+    const on = getComputedStyle(errs).position === 'fixed' && errs.children.length > 0;
+    document.documentElement.classList.toggle('errs-open', on);
   };
   if (window.ResizeObserver) new ResizeObserver(setErrsH).observe(errs);
   matchMedia('(max-width: 599px)').addEventListener('change', setErrsH);
