@@ -4,6 +4,8 @@ Static site for https://noclaudkit.com/pdf/ (GitHub Pages project site): merge, 
 and turn JPG/PNG images into a PDF, entirely in the browser. Files are processed locally with
 [@local-pdf-tools/core](https://github.com/swtormy-agents/pdf-tools) (pdf-lib) and previewed with pdf.js.
 
+Part of [NoClaudKit](https://noclaudkit.com/) — more browser tools: [Image converter](https://noclaudkit.com/image-converter/)
+
 ## Layout
 
 | Path | What |
