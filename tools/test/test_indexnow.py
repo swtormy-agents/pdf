@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest import mock
 
@@ -103,10 +105,14 @@ class ShaValidationTests(unittest.TestCase):
             good = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
             with self.assertRaises(indexnow.IndexNowError) as ctx:
                 indexnow.validate_explicit_before(tmp, "b" * 39)
-            self.assertIn("40-character", str(ctx.exception))
+            msg = str(ctx.exception)
+            self.assertIn("40-character", msg)
+            self.assertIn("before", msg.lower())
             with self.assertRaises(indexnow.IndexNowError) as ctx:
                 indexnow.validate_explicit_before(tmp, "g" * 40)
-            self.assertIn("40-character", str(ctx.exception))
+            msg = str(ctx.exception)
+            self.assertIn("40-character", msg)
+            self.assertIn("before", msg.lower())
             self.assertEqual(indexnow.validate_explicit_before(tmp, good), good)
 
 
@@ -153,6 +159,162 @@ class LiveRepoTests(unittest.TestCase):
     def test_dry_run_payload_shape(self):
         code = indexnow.main(["--dry-run", "--all", "--repo-root", str(ROOT)])
         self.assertEqual(code, 0)
+
+
+class SubmitTests(unittest.TestCase):
+    def test_empty_url_list_skips_http_post(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = write_min_repo(Path(raw))
+            with mock.patch.object(indexnow, "submit") as submit_mock:
+                code = indexnow.main(
+                    ["--submit", "--files", "README.md", "--repo-root", str(tmp)],
+                )
+            self.assertEqual(code, 0)
+            submit_mock.assert_not_called()
+
+
+class ResolveBeforeShaTests(unittest.TestCase):
+    @staticmethod
+    def _init_repo(tmp: Path) -> None:
+        subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+        subprocess.run(["git", "checkout", "-b", "main"], cwd=tmp, check=True)
+        tmp.joinpath("sitemap.xml").write_text(URLSET, encoding="utf-8")
+        subprocess.run(["git", "add", "sitemap.xml"], cwd=tmp, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", "sitemap"],
+            cwd=tmp,
+            check=True,
+        )
+
+    @staticmethod
+    def _commit_file(tmp: Path, name: str, message: str) -> str:
+        path = tmp.joinpath(name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("<html></html>\n", encoding="utf-8")
+        subprocess.run(["git", "add", name], cwd=tmp, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", message],
+            cwd=tmp,
+            check=True,
+        )
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+
+    def test_multi_commit_push_range_uses_push_before_not_head_parent(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            self._commit_file(tmp, "merge-pdf.html", "c1")
+            self._commit_file(tmp, "ru/merge-pdf.html", "c2")
+            after = self._commit_file(tmp, "index.html", "c3")
+            with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=None):
+                urls_parent = indexnow.collect_urls(tmp, None, None, after, all_locs=False)
+            with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=base):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=None):
+                    urls_push = indexnow.collect_urls(tmp, None, None, after, all_locs=False)
+            self.assertEqual(urls_parent, [HOME])
+            self.assertEqual(sorted(urls_push), sorted([HOME, MERGE, MERGE_RU]))
+
+    def test_resolve_before_sha_prefers_push_before_over_api_head(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            after = self._commit_file(tmp, "merge-pdf.html", "c1")
+            previous = "b" * 40
+            push_before = base
+            with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=push_before):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=previous):
+                    resolved = indexnow.resolve_before_sha(tmp, after, None)
+            self.assertEqual(resolved, push_before)
+
+    def test_resolve_before_sha_explicit_before_wins_over_push_and_previous(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            explicit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            after = self._commit_file(tmp, "merge-pdf.html", "c1")
+            with mock.patch.object(indexnow, "lookup_push_before_sha") as push_mock:
+                with mock.patch.object(indexnow, "lookup_previous_successful_head") as prev_mock:
+                    resolved = indexnow.resolve_before_sha(tmp, after, explicit)
+            self.assertEqual(resolved, explicit)
+            push_mock.assert_not_called()
+            prev_mock.assert_not_called()
+
+    def test_resolve_before_sha_uses_previous_only_when_push_missing(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            previous = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            self._commit_file(tmp, "merge-pdf.html", "c1")
+            after = self._commit_file(tmp, "index.html", "c2")
+            parent_fallback = indexnow.first_parent(tmp, after)
+            self.assertNotEqual(parent_fallback, previous)
+            with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=None):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=previous):
+                    resolved = indexnow.resolve_before_sha(tmp, after, None)
+            self.assertEqual(resolved, previous)
+            self.assertNotEqual(resolved, parent_fallback)
+
+    def test_push_before_for_head_sha_reads_push_event(self):
+        head = "a" * 40
+        before = "b" * 40
+        payload = [
+            {
+                "type": "PushEvent",
+                "payload": {"head": head, "before": before, "ref": "refs/heads/main"},
+            }
+        ]
+        with mock.patch.object(indexnow, "github_request_json", return_value=payload):
+            found = indexnow.push_before_for_head_sha("o/r", "token", head)
+        self.assertEqual(found, before)
+
+    def test_push_before_for_head_sha_ignores_feature_branch_with_same_head(self):
+        head = "a" * 40
+        wrong_before = "c" * 40
+        main_before = "b" * 40
+        payload = [
+            {
+                "type": "PushEvent",
+                "payload": {
+                    "head": head,
+                    "before": wrong_before,
+                    "ref": "refs/heads/feature/x",
+                },
+            },
+            {
+                "type": "PushEvent",
+                "payload": {"head": head, "before": main_before, "ref": "refs/heads/main"},
+            },
+        ]
+        with mock.patch.object(indexnow, "github_request_json", return_value=payload):
+            found = indexnow.push_before_for_head_sha("o/r", "token", head)
+        self.assertEqual(found, main_before)
+
+    def test_push_before_for_head_sha_api_errors_return_none_without_token_in_stderr(self):
+        secret = "ghp_super_secret_token_value"
+        cases = [
+            urllib.error.HTTPError("https://api.github.com/", 403, "Forbidden", {}, None),
+            urllib.error.HTTPError("https://api.github.com/", 429, "Rate Limited", {}, None),
+            json.JSONDecodeError("bad", "not json", 0),
+        ]
+        stderr_capture = io.StringIO()
+        for exc in cases:
+            with mock.patch.object(indexnow, "github_request_json", side_effect=exc):
+                with mock.patch("sys.stderr", stderr_capture):
+                    found = indexnow.push_before_for_head_sha("o/r", secret, "a" * 40)
+            self.assertIsNone(found)
+        self.assertNotIn(secret, stderr_capture.getvalue())
+
+    def test_previous_successful_workflow_head_api_errors_return_none_without_token(self):
+        secret = "ghp_super_secret_token_value"
+        with mock.patch.object(
+            indexnow,
+            "github_get_json",
+            side_effect=urllib.error.HTTPError("https://api.github.com/", 403, "x", {}, None),
+        ):
+            found = indexnow.previous_successful_workflow_head("o/r", secret)
+        self.assertIsNone(found)
 
 
 class MainAllEnvTests(unittest.TestCase):

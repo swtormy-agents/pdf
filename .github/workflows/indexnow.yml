@@ -23,6 +23,9 @@ permissions:
   actions: read
 
 jobs:
+  # workflow_run cannot filter on the triggering run's conclusion, so a failed
+  # Pages build still starts this workflow; the job-level if below skips work
+  # instead of adding a second trigger type (keeps one workflow, one skipped job).
   ping:
     name: Notify IndexNow of changed URLs
     if: >-

@@ -253,20 +253,14 @@ def resolve_main_tip(repo_root: Path) -> str:
 
 def validate_explicit_before(repo_root: Path, sha: str) -> str:
     if not is_full_sha(sha):
-        raise IndexNowError("after must be a 40-character hex commit SHA")
+        raise IndexNowError("before must be a 40-character hex commit SHA")
     tip = resolve_main_tip(repo_root)
     if not is_ancestor(repo_root, sha, tip):
-        raise IndexNowError("after is not an ancestor of main")
+        raise IndexNowError("before is not an ancestor of main")
     return sha
 
 
-def resolve_before(repo_root: Path, after: str, previous_head: str | None) -> str:
-    if previous_head and is_ancestor(repo_root, previous_head, after):
-        return previous_head
-    return first_parent(repo_root, after)
-
-
-def github_get_json(url: str, token: str) -> dict:
+def github_request_json(url: str, token: str):
     request = urllib.request.Request(
         url,
         headers={
@@ -278,6 +272,60 @@ def github_get_json(url: str, token: str) -> dict:
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def github_get_json(url: str, token: str) -> dict:
+    data = github_request_json(url, token)
+    if not isinstance(data, dict):
+        raise TypeError(f"expected JSON object from {url}")
+    return data
+
+
+def push_before_for_head_sha(repo: str, token: str, head_sha: str) -> str | None:
+    url = f"{GITHUB_API}/repos/{repo}/events?per_page=30"
+    try:
+        data = github_request_json(url, token)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, list):
+        return None
+    for event in data:
+        if event.get("type") != "PushEvent":
+            continue
+        payload = event.get("payload") or {}
+        if str(payload.get("head")) != head_sha:
+            continue
+        if payload.get("ref") != "refs/heads/main":
+            continue
+        before = payload.get("before")
+        if before and is_full_sha(str(before)):
+            return str(before)
+    return None
+
+
+def lookup_push_before_sha() -> str | None:
+    explicit = (os.environ.get("INDEXNOW_PUSH_BEFORE") or "").strip()
+    if explicit and is_full_sha(explicit):
+        return explicit
+    token = os.environ.get("GITHUB_TOKEN") or ""
+    repo = os.environ.get("GITHUB_REPOSITORY") or ""
+    if not token or not repo:
+        return None
+    head_sha = (os.environ.get("INDEXNOW_AFTER") or "").strip()
+    event_path = os.environ.get("GITHUB_EVENT_PATH") or ""
+    if event_path:
+        try:
+            event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            event = {}
+        workflow_run = event.get("workflow_run") or {}
+        if workflow_run.get("event") == "push":
+            wr_head = workflow_run.get("head_sha")
+            if wr_head and is_full_sha(str(wr_head)):
+                head_sha = str(wr_head)
+    if not head_sha or not is_full_sha(head_sha):
+        return None
+    return push_before_for_head_sha(repo, token, head_sha)
 
 
 def previous_successful_workflow_head(
@@ -324,7 +372,13 @@ def lookup_previous_successful_head() -> str | None:
 def resolve_before_sha(repo_root: Path, after: str, before_override: str | None) -> str:
     if before_override:
         return validate_explicit_before(repo_root, before_override)
-    return resolve_before(repo_root, after, lookup_previous_successful_head())
+    push_before = lookup_push_before_sha()
+    if push_before and is_ancestor(repo_root, push_before, after):
+        return push_before
+    previous = lookup_previous_successful_head()
+    if previous and is_ancestor(repo_root, previous, after):
+        return previous
+    return first_parent(repo_root, after)
 
 
 def root_key() -> tuple[str, str]:
