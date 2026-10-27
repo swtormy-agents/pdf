@@ -155,6 +155,82 @@ class LiveRepoTests(unittest.TestCase):
         self.assertEqual(code, 0)
 
 
+class SubmitTests(unittest.TestCase):
+    def test_empty_url_list_skips_http_post(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = write_min_repo(Path(raw))
+            with mock.patch.object(indexnow, "submit") as submit_mock:
+                code = indexnow.main(
+                    ["--submit", "--files", "README.md", "--repo-root", str(tmp)],
+                )
+            self.assertEqual(code, 0)
+            submit_mock.assert_not_called()
+
+
+class ResolveBeforeShaTests(unittest.TestCase):
+    @staticmethod
+    def _init_repo(tmp: Path) -> None:
+        subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+        subprocess.run(["git", "checkout", "-b", "main"], cwd=tmp, check=True)
+        tmp.joinpath("sitemap.xml").write_text(URLSET, encoding="utf-8")
+        subprocess.run(["git", "add", "sitemap.xml"], cwd=tmp, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", "sitemap"],
+            cwd=tmp,
+            check=True,
+        )
+
+    @staticmethod
+    def _commit_file(tmp: Path, name: str, message: str) -> str:
+        path = tmp.joinpath(name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("<html></html>\n", encoding="utf-8")
+        subprocess.run(["git", "add", name], cwd=tmp, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", message],
+            cwd=tmp,
+            check=True,
+        )
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+
+    def test_multi_commit_push_range_uses_push_before_not_head_parent(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            self._commit_file(tmp, "merge-pdf.html", "c1")
+            self._commit_file(tmp, "ru/merge-pdf.html", "c2")
+            after = self._commit_file(tmp, "index.html", "c3")
+            with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=None):
+                urls_parent = indexnow.collect_urls(tmp, None, None, after, all_locs=False)
+            with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=base):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=None):
+                    urls_push = indexnow.collect_urls(tmp, None, None, after, all_locs=False)
+            self.assertEqual(urls_parent, [HOME])
+            self.assertEqual(sorted(urls_push), sorted([HOME, MERGE, MERGE_RU]))
+
+    def test_resolve_before_sha_prefers_push_before_over_api_head(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            after = self._commit_file(tmp, "merge-pdf.html", "c1")
+            previous = "b" * 40
+            push_before = base
+            with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=push_before):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=previous):
+                    resolved = indexnow.resolve_before_sha(tmp, after, None)
+            self.assertEqual(resolved, push_before)
+
+    def test_push_before_for_head_sha_reads_push_event(self):
+        head = "a" * 40
+        before = "b" * 40
+        payload = [{"type": "PushEvent", "payload": {"head": head, "before": before}}]
+        with mock.patch.object(indexnow, "github_request_json", return_value=payload):
+            found = indexnow.push_before_for_head_sha("o/r", "token", head)
+        self.assertEqual(found, before)
+
+
 class MainAllEnvTests(unittest.TestCase):
     def test_indexnow_all_env_enables_all_mode(self):
         with tempfile.TemporaryDirectory() as raw:
