@@ -105,10 +105,14 @@ class ShaValidationTests(unittest.TestCase):
             good = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
             with self.assertRaises(indexnow.IndexNowError) as ctx:
                 indexnow.validate_explicit_before(tmp, "b" * 39)
-            self.assertIn("40-character", str(ctx.exception))
+            msg = str(ctx.exception)
+            self.assertIn("40-character", msg)
+            self.assertIn("before", msg.lower())
             with self.assertRaises(indexnow.IndexNowError) as ctx:
                 indexnow.validate_explicit_before(tmp, "g" * 40)
-            self.assertIn("40-character", str(ctx.exception))
+            msg = str(ctx.exception)
+            self.assertIn("40-character", msg)
+            self.assertIn("before", msg.lower())
             self.assertEqual(indexnow.validate_explicit_before(tmp, good), good)
 
 
@@ -241,12 +245,16 @@ class ResolveBeforeShaTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
             self._init_repo(tmp)
-            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
-            after = self._commit_file(tmp, "merge-pdf.html", "c1")
+            previous = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            self._commit_file(tmp, "merge-pdf.html", "c1")
+            after = self._commit_file(tmp, "index.html", "c2")
+            parent_fallback = indexnow.first_parent(tmp, after)
+            self.assertNotEqual(parent_fallback, previous)
             with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=None):
-                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=base):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=previous):
                     resolved = indexnow.resolve_before_sha(tmp, after, None)
-            self.assertEqual(resolved, base)
+            self.assertEqual(resolved, previous)
+            self.assertNotEqual(resolved, parent_fallback)
 
     def test_push_before_for_head_sha_reads_push_event(self):
         head = "a" * 40
