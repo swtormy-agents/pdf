@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest import mock
 
@@ -222,13 +224,89 @@ class ResolveBeforeShaTests(unittest.TestCase):
                     resolved = indexnow.resolve_before_sha(tmp, after, None)
             self.assertEqual(resolved, push_before)
 
+    def test_resolve_before_sha_explicit_before_wins_over_push_and_previous(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            explicit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            after = self._commit_file(tmp, "merge-pdf.html", "c1")
+            with mock.patch.object(indexnow, "lookup_push_before_sha") as push_mock:
+                with mock.patch.object(indexnow, "lookup_previous_successful_head") as prev_mock:
+                    resolved = indexnow.resolve_before_sha(tmp, after, explicit)
+            self.assertEqual(resolved, explicit)
+            push_mock.assert_not_called()
+            prev_mock.assert_not_called()
+
+    def test_resolve_before_sha_uses_previous_only_when_push_missing(self):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            self._init_repo(tmp)
+            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp, text=True).strip()
+            after = self._commit_file(tmp, "merge-pdf.html", "c1")
+            with mock.patch.object(indexnow, "lookup_push_before_sha", return_value=None):
+                with mock.patch.object(indexnow, "lookup_previous_successful_head", return_value=base):
+                    resolved = indexnow.resolve_before_sha(tmp, after, None)
+            self.assertEqual(resolved, base)
+
     def test_push_before_for_head_sha_reads_push_event(self):
         head = "a" * 40
         before = "b" * 40
-        payload = [{"type": "PushEvent", "payload": {"head": head, "before": before}}]
+        payload = [
+            {
+                "type": "PushEvent",
+                "payload": {"head": head, "before": before, "ref": "refs/heads/main"},
+            }
+        ]
         with mock.patch.object(indexnow, "github_request_json", return_value=payload):
             found = indexnow.push_before_for_head_sha("o/r", "token", head)
         self.assertEqual(found, before)
+
+    def test_push_before_for_head_sha_ignores_feature_branch_with_same_head(self):
+        head = "a" * 40
+        wrong_before = "c" * 40
+        main_before = "b" * 40
+        payload = [
+            {
+                "type": "PushEvent",
+                "payload": {
+                    "head": head,
+                    "before": wrong_before,
+                    "ref": "refs/heads/feature/x",
+                },
+            },
+            {
+                "type": "PushEvent",
+                "payload": {"head": head, "before": main_before, "ref": "refs/heads/main"},
+            },
+        ]
+        with mock.patch.object(indexnow, "github_request_json", return_value=payload):
+            found = indexnow.push_before_for_head_sha("o/r", "token", head)
+        self.assertEqual(found, main_before)
+
+    def test_push_before_for_head_sha_api_errors_return_none_without_token_in_stderr(self):
+        secret = "ghp_super_secret_token_value"
+        cases = [
+            urllib.error.HTTPError("https://api.github.com/", 403, "Forbidden", {}, None),
+            urllib.error.HTTPError("https://api.github.com/", 429, "Rate Limited", {}, None),
+            json.JSONDecodeError("bad", "not json", 0),
+        ]
+        stderr_capture = io.StringIO()
+        for exc in cases:
+            with mock.patch.object(indexnow, "github_request_json", side_effect=exc):
+                with mock.patch("sys.stderr", stderr_capture):
+                    found = indexnow.push_before_for_head_sha("o/r", secret, "a" * 40)
+            self.assertIsNone(found)
+        self.assertNotIn(secret, stderr_capture.getvalue())
+
+    def test_previous_successful_workflow_head_api_errors_return_none_without_token(self):
+        secret = "ghp_super_secret_token_value"
+        with mock.patch.object(
+            indexnow,
+            "github_get_json",
+            side_effect=urllib.error.HTTPError("https://api.github.com/", 403, "x", {}, None),
+        ):
+            found = indexnow.previous_successful_workflow_head("o/r", secret)
+        self.assertIsNone(found)
 
 
 class MainAllEnvTests(unittest.TestCase):

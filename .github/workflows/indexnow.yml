@@ -48,7 +48,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
           INDEXNOW_AFTER: ${{ github.event.workflow_run.head_sha }}
           INDEXNOW_BEFORE: ${{ inputs.after }}
           INDEXNOW_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.all && '1' || '' }}
