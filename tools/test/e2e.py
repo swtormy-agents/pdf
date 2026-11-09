@@ -559,7 +559,7 @@ async def run(bname, p, tmp):
     pg = await newpage(ctx); w = Watch(pg, bname); watches.append(w)
     r = await pg.goto(B + 'sitemap.xml'); sx = await r.text()
     locs = re.findall(r'<loc>([^<]+)</loc>', sx)
-    ok(pre + 'sitemap: 21 unique URLs, 4 hreflang alternates each', len(locs) == 21 == len(set(locs)) and sx.count('hreflang=') == 21 * 4, (len(locs), sx.count('hreflang=')))
+    ok(pre + 'sitemap: 15 unique URLs (no privacy/licenses), 4 hreflang alternates each', len(locs) == 15 == len(set(locs)) and sx.count('hreflang=') == 15 * 4 and 'privacy.html' not in sx and 'licenses.html' not in sx, (len(locs), sx.count('hreflang=')))
     await pg.close()
 
     # ---- encrypted on split page ----
