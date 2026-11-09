@@ -44,14 +44,32 @@ def rel(p): return './' if p=='index.html' else p
 def home_href(l): return '/' if l=='en' else f'/{l}/'
 def home_abs(l): return 'https://noclaudkit.com'+home_href(l)
 CONV_ROOT='/image-converter/'
-FT_KEYS=('home','conv','pdf','heic','merge','split','jpg')
-FT_LABEL={'home':'ft_home','conv':'f_conv','pdf':'f_pdf','heic':'ft_heic','merge':'ft_merge','split':'ft_split','jpg':'ft_jpg'}
+PAIRS=[('heic','jpg','HEIC','JPG'),('heic','png','HEIC','PNG'),('webp','png','WebP','PNG'),('webp','jpg','WebP','JPG'),
+       ('avif','jpg','AVIF','JPG'),('avif','png','AVIF','PNG'),('png','webp','PNG','WebP'),('jpg','webp','JPG','WebP')]
+FT_SITE_KEYS=('home','conv','pdf')
+FT_PDF_KEYS=('merge','split','jpg')
+FT_LABEL={'home':'ft_home','conv':'f_conv','pdf':'f_pdf','merge':'ft_merge','split':'ft_split','jpg':'ft_jpg'}
+PAGE_SEO={'index.html':'hub','merge-pdf.html':'merge','split-pdf.html':'split','organize-pdf.html':'organize','jpg-to-pdf.html':'jpg'}
 PAGE_CRUMB={'merge-pdf.html':'ft_merge','split-pdf.html':'ft_split','jpg-to-pdf.html':'ft_jpg',
             'organize-pdf.html':'mode_reorder','privacy.html':'f_priv','licenses.html':'f_lic'}
 def ft_href(lang,key):
     p=lp(lang)
-    return {'home':home_href(lang),'conv':CONV_ROOT+p,'pdf':ROOT+p,'heic':CONV_ROOT+p+'heic-to-jpg.html',
+    return {'home':home_href(lang),'conv':CONV_ROOT+p,'pdf':ROOT+p,
             'merge':'merge-pdf.html','split':'split-pdf.html','jpg':'jpg-to-pdf.html'}[key]
+def ft_pair_href(lang,a,b):
+    return CONV_ROOT+lp(lang)+f'{a}-to-{b}.html'
+def ft_pair_label(lang,A,B):
+    return T[lang]['pair_link'].format(A=A,B=B)
+def ft_nav_items(lang,page):
+    """Footer «All tools»: site hubs + all 8 converter pairs + PDF tools (interlinking §3.4)."""
+    t=T[lang]; items=[]
+    for key in FT_SITE_KEYS:
+        items.append((ft_href(lang,key),t[FT_LABEL[key]],key=='home',ft_is_current(page,key)))
+    for a,b,A,B in PAIRS:
+        items.append((ft_pair_href(lang,a,b),ft_pair_label(lang,A,B),False,False))
+    for key in FT_PDF_KEYS:
+        items.append((ft_href(lang,key),t[FT_LABEL[key]],False,ft_is_current(page,key)))
+    return items
 def ft_is_current(page,key):
     return {'index.html':'pdf','merge-pdf.html':'merge','split-pdf.html':'split','jpg-to-pdf.html':'jpg'}.get(page)==key
 def crumb_trail(lang,page):
@@ -160,9 +178,8 @@ def head(L,lang,page,title,desc,ld='',bodyattrs='',doc=False,crumbs=''):
 def foot(lang,page):
     t=T[lang]
     items=[]
-    for key in FT_KEYS:
-        h,lab,cur=ft_href(lang,key),e(vis(lang,t[FT_LABEL[key]])),ft_is_current(page,key)
-        items.append(f'<li><a href="{e(h)}"'+(' translate="no"' if key=='home' else '')+(' aria-current="page"' if cur else '')+f'>{lab}</a></li>')
+    for h,lab,tno,cur in ft_nav_items(lang,page):
+        items.append(f'<li><a href="{e(h)}"'+(' translate="no"' if tno else '')+(' aria-current="page"' if cur else '')+f'>{e(vis(lang,lab))}</a></li>')
     about=[('privacy.html',t['f_priv'],page=='privacy.html'),(REPO,t['f_src'],False),(REPO+'/issues',t['f_contact'],False),('licenses.html',t['f_lic'],page=='licenses.html')]
     about_html=''.join(f'<li><a class="link link-hover min-h-11 min-w-11 inline-flex items-center" href="{h}"'+(' aria-current="page"' if cur else '')+f'>{e(vis(lang,x))}</a></li>' for h,x,cur in about)
     return (f'</main>\n<footer class="bg-base-200 mt-12"><div class="mx-auto max-w-5xl px-4 sm:px-6 py-6 text-base-content space-y-6">'
@@ -431,7 +448,7 @@ def check_page(lang,p,s):
         assert f'<a class="link link-primary" href="{heic_href(lang)}">' in s, f'HEIC FAQ link missing in {lang}/{p}'
     assert 'PDF-инструменты' not in s.replace('\u2011','-'), f'PDF-инструменты left in {lang}/{p}'
     ft=re.search(r'<nav class="ft"[^>]*>.*?</nav>',s,re.S)
-    assert ft and ft.group(0).count('<a href=')==7, f'7-link footer missing in {lang}/{p}'
+    assert ft and ft.group(0).count('<a href=')==14, f'14-link footer missing in {lang}/{p}'
     assert '<nav class="crumbs"' in s and '<span aria-current="page">' in s, f'breadcrumbs missing in {lang}/{p}'
     if p=='merge-pdf.html':
         cx=re.search(r'<p class="cross[^"]*"[^>]*>.*?</p>',s,re.S)
@@ -445,8 +462,9 @@ def check_page(lang,p,s):
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):
         d=json.loads(j); assert 'aggregateRating' not in j
         if d['@type']=='FAQPage':
-            faq=re.search(r'<section class="faq[^"]*">(.*?)</section>',s,re.S)
-            fb=faq.group(1) if faq else s
+            faq=re.search(r'<section class="faq[^"]*"[^>]*>(.*?)</section>',s,re.S)
+            assert faq, f'FAQPage JSON-LD but no FAQ section in {lang}/{p}'
+            fb=faq.group(1)
             vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',fb)]
             va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',fb)]
             jq=[q['name'] for q in d['mainEntity']]; ja=[q['acceptedAnswer']['text'] for q in d['mainEntity']]
@@ -471,13 +489,24 @@ def selftest():
     finally: T,SEO,FAQ=oT,oS,oF
 
 def sources(l,p):
-    """Content files whose last commit becomes <lastmod> (not gen.py or a single build stamp)."""
+    """Content inputs for a page (used by lastmod(); gen.py is never a source)."""
     f=[f'tools/i18n/{l}.json']
     if p=='privacy.html': f.append('tools/i18n/privacy.json')
     elif p=='licenses.html': f+=['licenses','tools/i18n/licenses-page.json']
     elif p=='index.html': f+=['tools/i18n/seo.json','tools/i18n/faq.json','tools/i18n/header.json','tools/i18n/interlink.json']
     else: f+=['tools/i18n/seo.json','tools/i18n/faq.json']
     return f
+def _git_last_date(extra_args,paths):
+    """Most recent commit date touching paths; --no-merges first, then any commit (image-converter parity)."""
+    args=['git','log','-1','--no-merges','--format=%cs',*extra_args,'--',*paths]
+    d=subprocess.run(args,capture_output=True,text=True).stdout.strip()
+    if not d:
+        d=subprocess.run(['git','log','-1','--format=%cs',*extra_args,'--',*paths],capture_output=True,text=True).stdout.strip()
+    return d
+def _file_lastmod(path):
+    return _git_last_date([], [path])
+def _needle_lastmod(needle,path):
+    return _git_last_date(['-S',needle], [path])
 def ensure_git_history():
     """Sitemap lastmod needs real per-file history; shallow clones only see HEAD (wrong dates)."""
     env={**os.environ,'GIT_TERMINAL_PROMPT':'0'}
@@ -496,16 +525,34 @@ def ensure_git_history():
             return
     sys.exit('gen.py: shallow git clone and unshallow failed; full history is required for sitemap lastmod')
 def lastmod(l,p):
-    d=subprocess.run(['git','log','-1','--format=%cs','--',*sources(l,p)],capture_output=True,text=True).stdout.strip()
-    if not d:
+    """Per-page content date: max of UI json, page-specific seo/faq slices, and hub-only extras (not whole-file seo bumps on unrelated URLs)."""
+    dates=[_file_lastmod(f'tools/i18n/{l}.json')]
+    if p=='privacy.html':
+        dates.append(_file_lastmod('tools/i18n/privacy.json'))
+    elif p=='licenses.html':
+        dates+=[_file_lastmod('tools/i18n/licenses-page.json'),_file_lastmod('licenses')]
+    elif p in PAGE_SEO:
+        key=PAGE_SEO[p]
+        sk, fk=SEO[l][key], FAQ[l][key]
+        for needle in (sk['title'],sk['h1'],sk['meta']):
+            d=_needle_lastmod(needle,'tools/i18n/seo.json')
+            if d: dates.append(d)
+        if fk:
+            d=_needle_lastmod(fk[0]['q'],'tools/i18n/faq.json')
+            if d: dates.append(d)
+        if p=='index.html':
+            dates+=[_file_lastmod(x) for x in ('tools/i18n/header.json','tools/i18n/interlink.json')]
+    dates=[d for d in dates if d]
+    if not dates:
         sys.exit(f'gen.py: no git commit date for {l}/{p} (sources: {sources(l,p)}); need full history, not HEAD fallback')
+    d=max(dates)
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), f'no git date for {l}/{p}'
     return d
 
-def write_sitemap():
+def write_sitemap(pages):
     """Emit sitemap.xml (15 tool URLs); lastmod from git history of each page's i18n sources."""
     ensure_git_history()
-    sm_pages=[(l,p) for l in LANGS for p,k,m in TOOLS]
+    sm_pages=[(l,p) for l,p in pages if p not in DOC]
     assert len(sm_pages)==15, len(sm_pages)
     sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
         +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'
@@ -584,7 +631,7 @@ def build_site():
             f=lp(lang)+p
             if not os.path.exists(f) or open(f,encoding='utf-8').read()!=s: open(f,'w',encoding='utf-8').write(s)
             pages.append((lang,p))
-    sm=write_sitemap()
+    sm=write_sitemap(pages)
     print(len(pages),'pages,',len(sm),'sitemap URLs')
     print('llms:',', '.join(gen_llms()))
 

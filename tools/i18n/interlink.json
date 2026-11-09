@@ -1,5 +1,6 @@
 {
  "en": {
+  "pair_link": "{A} to {B}",
   "f_pdf": "PDF tools",
   "other_tools": "Other PDF tools",
   "ft_home": "NoClaudKit",
@@ -13,6 +14,7 @@
   "merge_cross": "Need to combine photos? Convert them with {link}"
  },
  "ru": {
+  "pair_link": "{A}\u00a0в\u00a0{B}",
   "f_pdf": "Инструменты для PDF",
   "other_tools": "Другие инструменты для PDF",
   "ft_home": "NoClaudKit",
@@ -26,6 +28,7 @@
   "merge_cross": "Нужно объединить фото? Сначала преобразуйте их с помощью «{link}»."
  },
  "zh": {
+  "pair_link": "{A} 转 {B}",
   "f_pdf": "PDF 工具",
   "other_tools": "其他 PDF 工具",
   "ft_home": "NoClaudKit",
