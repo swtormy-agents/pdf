@@ -7,6 +7,7 @@ strings are always read fresh). Sources (read-only, never edited here):
   FAQ         /workspace/seo/pdf-tool-faq-en.md, /workspace/i18n/pdf-tool/faq/faq-{ru,zh}.md
   Privacy     /workspace/company/legal/pdf-privacy-disclaimer.md   (Sarah Mitchell)
   Header/legal line + pair_h1 (HEIC link anchor): /workspace/local-image-converter/tools/i18n/{lang}.json (same component as the converter)
+  Licences page (short-page UI strings not yet in Nathan's JSON): tools/i18n/licenses-page.json (this repo)
 Only public text is extracted (no author notes). If a source dir is missing (e.g. CI), the committed copies are used."""
 import os,re,json,sys
 os.chdir(os.path.join(os.path.dirname(__file__),'..'))
@@ -50,7 +51,10 @@ def privacy(path):
 def main():
     if not os.path.isdir(I18N): print('sync_i18n: sources not found, using committed tools/i18n/'); return
     os.makedirs(OUT,exist_ok=True)
-    for l in LANGS: dump(f'{l}.json',json.load(open(f'{I18N}/{l}.json',encoding='utf-8')))
+    lic_page=json.load(open('tools/i18n/licenses-page.json',encoding='utf-8'))
+    for l in LANGS:
+        ui=json.load(open(f'{I18N}/{l}.json',encoding='utf-8')); ui.update(lic_page[l])
+        dump(f'{l}.json',ui)
     seo=json.load(open(f'{I18N}/seo/seo-ru-zh.json',encoding='utf-8')); seo['en']=seo_en(f'{W}/seo/pdf-tool-keywords-structure.md')
     dump('seo.json',{l:seo[l] for l in LANGS})
     F={'en':faq(f'{W}/seo/pdf-tool-faq-en.md','Q:','A:'),'ru':faq(f'{I18N}/faq/faq-ru.md','В:','О:'),'zh':faq(f'{I18N}/faq/faq-zh.md','问：','答：')}

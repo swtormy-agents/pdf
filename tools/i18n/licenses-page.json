@@ -1,0 +1,17 @@
+{
+ "en": {
+  "licenses_txt": "Full licence texts are plain .txt files; use the links in the table and the list below.",
+  "lic_h_notices": "Additional licence notices",
+  "lic_col_txt": "Full text"
+ },
+ "ru": {
+  "licenses_txt": "Полные тексты лицензий — в\u00a0файлах .txt; ссылки в\u00a0таблице и\u00a0в\u00a0списке ниже.",
+  "lic_h_notices": "Дополнительные уведомления о лицензиях",
+  "lic_col_txt": "Полный текст"
+ },
+ "zh": {
+  "licenses_txt": "完整许可证文本为纯 .txt 文件；请使用下表及下方列表中的链接。",
+  "lic_h_notices": "其他许可证声明",
+  "lic_col_txt": "全文"
+ }
+}

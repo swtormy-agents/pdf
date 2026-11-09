@@ -19,7 +19,8 @@ LANG_CODE={'en':'EN','ru':'RU','zh':''}
 OG_LOCALE={'en':'en_US','ru':'ru_RU','zh':'zh_CN'}
 NB='\u00a0'
 def load(n): return json.load(open(f'tools/i18n/{n}',encoding='utf-8'))
-UI={l:load(f'{l}.json') for l in LANGS}; SEO=load('seo.json'); FAQ=load('faq.json'); PRIV=load('privacy.json'); HDR=load('header.json'); IL=load('interlink.json')
+LIC_PAGE=load('licenses-page.json')
+UI={l:{**load(f'{l}.json'),**LIC_PAGE[l]} for l in LANGS}; SEO=load('seo.json'); FAQ=load('faq.json'); PRIV=load('privacy.json'); HDR=load('header.json'); IL=load('interlink.json')
 T={l:{**UI[l],**HDR[l],**IL[l]} for l in LANGS}
 
 # page file -> (seo key, app mode, faq key)
@@ -476,15 +477,26 @@ def sources(l,p):
     """Content files whose last commit becomes <lastmod> (not gen.py or a single build stamp)."""
     f=[f'tools/i18n/{l}.json']
     if p=='privacy.html': f.append('tools/i18n/privacy.json')
-    elif p=='licenses.html': f.append('licenses')
+    elif p=='licenses.html': f+=['licenses','tools/i18n/licenses-page.json']
     elif p=='index.html': f+=['tools/i18n/seo.json','tools/i18n/faq.json','tools/i18n/header.json','tools/i18n/interlink.json']
     else: f+=['tools/i18n/seo.json','tools/i18n/faq.json']
     return f
+def ensure_git_history():
+    """Sitemap lastmod needs real per-file history; shallow clones only see HEAD (wrong dates)."""
+    if subprocess.run(['git','rev-parse','--is-shallow-repository'],capture_output=True,text=True).stdout.strip()!='true':
+        return
+    for cmd in (['git','fetch','--unshallow'], ['git','fetch','--depth=1000000','origin']):
+        subprocess.run(cmd,capture_output=True,text=True)
+        if subprocess.run(['git','rev-parse','--is-shallow-repository'],capture_output=True,text=True).stdout.strip()!='true':
+            return
+    sys.exit('gen.py: shallow git clone and unshallow failed; full history is required for sitemap lastmod')
 def lastmod(l,p):
     d=subprocess.run(['git','log','-1','--format=%cs','--',*sources(l,p)],capture_output=True,text=True).stdout.strip()
-    if not d: d=subprocess.run(['git','log','-1','--format=%cs'],capture_output=True,text=True).stdout.strip()
+    if not d:
+        sys.exit(f'gen.py: no git commit date for {l}/{p} (sources: {sources(l,p)}); need full history, not HEAD fallback')
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), f'no git date for {l}/{p}'
     return d
+ensure_git_history()
 SM=[(l,p) for l,p in pages if p not in DOC]  # privacy + licences: footer links only, not sitemap (SEO #8)
 assert len(SM)==15, len(SM)
 sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
