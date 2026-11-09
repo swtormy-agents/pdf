@@ -11,8 +11,9 @@ Part of [NoClaudKit](https://noclaudkit.com/) — more browser tools: [Image con
 | Path | What |
 |---|---|
 | `index.html`, `merge-pdf.html`, `split-pdf.html`, `organize-pdf.html`, `jpg-to-pdf.html`, `privacy.html`, `licenses.html` | English pages (generated) |
+| `licenses/*.txt` | Full third-party licence texts (generated) |
 | `ru/`, `zh/` | Russian and Simplified Chinese pages (generated) |
-| `sitemap.xml` | 21 URLs with hreflang alternates (generated) |
+| `sitemap.xml` | 15 URLs with hreflang alternates (generated; privacy and licences excluded) |
 | `assets/app.js`, `assets/worker.js` | esbuild bundles of `tools/src/` + core (generated) |
 | `assets/vendor/pdf.min.js`, `pdf.worker.min.js` | pdfjs-dist, self-hosted, copied verbatim |
 | `build/app.css` | Tailwind 4 + daisyUI 5 build of `tools/css/input.css` |

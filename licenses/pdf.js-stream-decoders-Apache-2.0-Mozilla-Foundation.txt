@@ -1,0 +1,15 @@
+/*
+ * Copyright 2012 Mozilla Foundation
+ *
+ * The Stream class contained in this file is a TypeScript port of the
+ * JavaScript Stream class in Mozilla's pdf.js project, made available
+ * under the Apache 2.0 open source license.
+ */
+
+/*
+ * Copyright 2012 Mozilla Foundation
+ *
+ * The FlateStream class contained in this file is a TypeScript port of the
+ * JavaScript FlateStream class in Mozilla's pdf.js project, made available
+ * under the Apache 2.0 open source license.
+ */

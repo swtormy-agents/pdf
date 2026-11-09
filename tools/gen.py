@@ -259,7 +259,7 @@ def faq_html(lang,items,heic=False):
 def i18n_block(lang):
     """UI strings for assets/app.js as a JSON data block (type=application/json is never executed, so CSP script-src
     'self' is unaffected). U+00A0 of visible ru strings is written as the escape \\u00a0, never as a raw character."""
-    keys=[k for k in UI[lang] if not k.startswith(('licenses_','f_','foot','mode_','drop','h1_','lede','err_heic_','ft_','crumbs_','about_','merge_'))]  # err_heic_*: jpg-to-pdf data attributes only
+    keys=[k for k in UI[lang] if not k.startswith(('licenses_','lic_','f_','foot','mode_','drop','h1_','lede','err_heic_','ft_','crumbs_','about_','merge_'))]  # err_heic_*: jpg-to-pdf data attributes only
     d={k:UI[lang][k] for k in keys}
     j=json.dumps(d,ensure_ascii=False,sort_keys=True).replace(NB,'\\u00a0').replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     return f'<script type="application/json" id="i18n">{j}</script>\n'
@@ -321,13 +321,49 @@ def privacy_page(lang):
     body=re.sub(r'(open an issue in the GitHub repository|создайте issue в\S? ?репозитории на\S? ?GitHub|在 GitHub 仓库中提交 issue)',lambda m:f'<a href="{REPO}/issues">{m.group(1)}</a>',body)
     return head(T,lang,'privacy.html',t['privacy_title'],t['privacy_desc'],jsonld([crumbs_ld(lang,'privacy.html')]),doc=True,crumbs=crumbs_html(lang,'privacy.html'))+body+foot(lang,'privacy.html')
 
+def lic_slug(title):
+    s=re.sub(r'[^a-zA-Z0-9._-]+','-',title.replace('@','at-'))
+    return re.sub(r'-+','-',s).strip('-')+'.txt'
+
+def write_license_txts(texts):
+    os.makedirs('licenses',exist_ok=True)
+    out=[]
+    for title,txt in texts:
+        fn=lic_slug(title); body=txt if txt.endswith('\n') else txt+'\n'
+        path=f'licenses/{fn}'
+        if not os.path.exists(path) or open(path,encoding='utf-8').read()!=body: open(path,'w',encoding='utf-8').write(body)
+        out.append((title,fn))
+    return out
+
+def lic_txt_for_pkg(name,files):
+    n=name.lower()
+    if 'pdfjs' in n or 'pdf.js' in n:
+        for title,fn in files:
+            if 'pdfjs-dist' in title.lower() or title.lower().startswith('pdf.js /'): return fn
+        for title,fn in files:
+            if 'pdfjs' in title.lower() or 'pdf.js' in title.lower(): return fn
+    aliases={'tailwindcss':'tailwind','daisyui':'daisyui','base64-arraybuffer':'base64-arraybuffer'}
+    base=aliases.get(n,name.split()[0].lower().lstrip('@'))
+    for title,fn in files:
+        tl=title.lower()
+        if tl.startswith(base) or base in tl or tl.startswith('@'+base): return fn
+    return None
+
 def licenses_page(lang):
-    t=T[lang]
-    rows=''.join(f'<tr><td translate="no">{e(n)}</td><td class="tabular-nums">{e(v)}</td><td translate="no">{e(l)}</td></tr>' for n,v,l,_ in LIBS['libs'])
-    texts=''.join(f'<h3 translate="no">{e(h)}</h3><pre class="lic" lang="en" translate="no">{e(txt)}</pre>\n' for h,txt in LIBS['texts'])
-    body=(f'<h1 id="h1">{e(vis(lang,re.split(r' [–—] |｜| · ',t["licenses_title"])[0]))}</h1>\n<p>{e(t["licenses_body"])}</p>\n'
-          f'<h2>{e(t["lic_h_libs"])}</h2><div class="overflow-x-auto"><table class="table"><thead><tr><th>{e(t["lic_col_pkg"])}</th><th>{e(t["lic_col_ver"])}</th><th>{e(t["lic_col_lic"])}</th></tr></thead><tbody>{rows}</tbody></table></div>\n'
-          f'<h2>{e(t["lic_h_texts"])}</h2>\n{texts}')
+    t=T[lang]; P='' if lang=='en' else '../'
+    trs=[]
+    for n,v,l,_ in LIBS['libs']:
+        fn=lic_txt_for_pkg(n,LIC_FILES)
+        link=f'<td><a class="link link-primary" href="{P}licenses/{e(fn)}" translate="no">{e(t["lic_col_txt"])}</a></td>' if fn else '<td></td>'
+        trs.append(f'<tr><td translate="no">{e(n)}</td><td class="tabular-nums">{e(v)}</td><td translate="no">{e(l)}</td>{link}</tr>')
+    rows=''.join(trs)
+    listed={lic_txt_for_pkg(n,LIC_FILES) for n,*_ in LIBS['libs'] if lic_txt_for_pkg(n,LIC_FILES)}
+    extra=''.join(f'<li><a class="link link-primary" href="{P}licenses/{e(fn)}" translate="no">{e(h)}</a></li>\n' for h,fn in LIC_FILES if fn not in listed)
+    extras=(f'<h2>{e(t["lic_h_notices"])}</h2><ul class="list-disc ps-6 space-y-1">\n{extra}</ul>\n' if extra else '')
+    body=(f'<h1 id="h1">{e(vis(lang,re.split(r' [–—] |｜| · ',t["licenses_title"])[0]))}</h1>\n'
+          f'<p>{e(t["licenses_body"])}</p>\n<p>{e(t["licenses_txt"])}</p>\n'
+          f'<h2>{e(t["lic_h_libs"])}</h2><div class="overflow-x-auto"><table class="table"><thead><tr><th>{e(t["lic_col_pkg"])}</th><th>{e(t["lic_col_ver"])}</th><th>{e(t["lic_col_lic"])}</th><th>{e(t["lic_col_txt"])}</th></tr></thead><tbody>{rows}</tbody></table></div>\n'
+          +extras)
     return head(T,lang,'licenses.html',t['licenses_title'],t['licenses_desc'],jsonld([crumbs_ld(lang,'licenses.html')]),doc=True,crumbs=crumbs_html(lang,'licenses.html'))+body+foot(lang,'licenses.html')
 
 def load_libs():
@@ -422,6 +458,7 @@ def selftest():
     finally: T,SEO,FAQ=oT,oS,oF
 
 LIBS=load_libs()
+LIC_FILES=write_license_txts(LIBS['texts'])
 selftest()
 for k in SEO['ru']: assert 'онлайн' not in SEO['ru'][k]['title'].lower()
 pages=[]
@@ -435,15 +472,21 @@ for lang in LANGS:
         if not os.path.exists(f) or open(f,encoding='utf-8').read()!=s: open(f,'w',encoding='utf-8').write(s)
         pages.append((lang,p))
 
+def sources(l,p):
+    """Content files whose last commit becomes <lastmod> (not gen.py or a single build stamp)."""
+    f=[f'tools/i18n/{l}.json']
+    if p=='privacy.html': f.append('tools/i18n/privacy.json')
+    elif p=='licenses.html': f.append('licenses')
+    elif p=='index.html': f+=['tools/i18n/seo.json','tools/i18n/faq.json','tools/i18n/header.json','tools/i18n/interlink.json']
+    else: f+=['tools/i18n/seo.json','tools/i18n/faq.json']
+    return f
 def lastmod(l,p):
-    """Last commit date of the page's content sources (not of gen.py); falls back to the newest commit date."""
-    src=[f'tools/i18n/{l}.json','tools/i18n/seo.json','tools/i18n/faq.json']
-    d=subprocess.run(['git','log','-1','--format=%cs','--',*src],capture_output=True,text=True).stdout.strip()
+    d=subprocess.run(['git','log','-1','--format=%cs','--',*sources(l,p)],capture_output=True,text=True).stdout.strip()
     if not d: d=subprocess.run(['git','log','-1','--format=%cs'],capture_output=True,text=True).stdout.strip()
-    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), 'no git date'
+    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), f'no git date for {l}/{p}'
     return d
-SM=[(l,p) for l,p in pages]  # all 21 pages incl. privacy + licences (converter convention, SEO review 38054b6 #4)
-assert len(SM)==21, len(SM)
+SM=[(l,p) for l,p in pages if p not in DOC]  # privacy + licences: footer links only, not sitemap (SEO #8)
+assert len(SM)==15, len(SM)
 sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
  +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'+''.join(f'<xhtml:link rel="alternate" hreflang="{HREFLANG[x]}" href="{url(x,p)}"/>' for x in LANGS)+f'<xhtml:link rel="alternate" hreflang="x-default" href="{url("en",p)}"/></url>\n' for l,p in SM)+'</urlset>\n')
 if not os.path.exists('sitemap.xml') or open('sitemap.xml').read()!=sm: open('sitemap.xml','w').write(sm)
@@ -482,9 +525,9 @@ def gen_llms():
     body=re.sub(r'<code>(.*?)</code>',r'`\1`',body); body=body.replace('</p>','\n\n').replace('<p>','')
     assert '<' not in body, 'unconverted tag in privacy.md'
     files['privacy.md']=re.sub(r'\n{3,}','\n\n',html.unescape(body).replace(NB,' ').strip()+'\n')
-    lic=(f'# {re.split(r" [–—] ",t["licenses_title"])[0]}\n\nHTML version: {url("en","licenses.html")}\n\n{t["licenses_body"]}\n\n## {t["lic_h_libs"]}\n\n'
-         f'| {t["lic_col_pkg"]} | {t["lic_col_ver"]} | {t["lic_col_lic"]} |\n|---|---|---|\n'+''.join(f'| {n} | {v} | {l.replace("see below","see the full notice on the [HTML version]("+url("en","licenses.html")+")")} |\n' for n,v,l,_ in LIBS['libs'])
-         +f'\nFull licence texts: {url("en","licenses.html")}\n')
+    lic=(f'# {re.split(r" [–—] ",t["licenses_title"])[0]}\n\nHTML version: {url("en","licenses.html")}\n\n{t["licenses_body"]}\n\n{t["licenses_txt"]}\n\n## {t["lic_h_libs"]}\n\n'
+         f'| {t["lic_col_pkg"]} | {t["lic_col_ver"]} | {t["lic_col_lic"]} |\n|---|---|---|\n'+''.join(f'| {n} | {v} | {l} |\n' for n,v,l,_ in LIBS['libs'])
+         +'\n## '+t["lic_h_notices"]+'\n\n'+''.join(f'- [{plain(h)}]({BASE}licenses/{fn})\n' for h,fn in LIC_FILES))
     files['licenses.md']=lic
     txt=(f'# Local PDF Tools\n\n> {plain(S["hub"]["meta"])}\n\n{INTRO}\n\n'
          f'## Tools\n\n'+tools_md()+
