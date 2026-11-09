@@ -31,7 +31,7 @@ def _parse_open(s, pos):
         if end < 0:
             raise EditorialHtmlError('unclosed a href')
         href = html.unescape(s[q:end])
-        if not HREF_OK.match(href) or href.startswith('//'):
+        if not HREF_OK.fullmatch(href) or href.startswith('//'):
             raise EditorialHtmlError(f'bad href: {href!r}')
         if s[end:end + 2] != '">':
             raise EditorialHtmlError('bad a tag')
