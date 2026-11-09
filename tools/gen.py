@@ -9,6 +9,7 @@ os.chdir(os.path.join(os.path.dirname(__file__),'..'))
 sys.path.insert(0,'tools'); import sync_i18n; sync_i18n.main()
 from editorial_html import validate_editorial_html, editorial_section
 from faq_markup import faq_answer_html, faq_plain
+import sitemap_lastmod
 
 BASE='https://noclaudkit.com/pdf/'
 ROOT='/pdf/'
@@ -496,17 +497,15 @@ def sources(l,p):
     elif p=='index.html': f+=['tools/i18n/seo.json','tools/i18n/faq.json','tools/i18n/header.json','tools/i18n/interlink.json']
     else: f+=['tools/i18n/seo.json','tools/i18n/faq.json']
     return f
-def _git_last_date(extra_args,paths):
-    """Most recent commit date touching paths; --no-merges first, then any commit (image-converter parity)."""
-    args=['git','log','-1','--no-merges','--format=%cs',*extra_args,'--',*paths]
-    d=subprocess.run(args,capture_output=True,text=True).stdout.strip()
-    if not d:
-        d=subprocess.run(['git','log','-1','--format=%cs',*extra_args,'--',*paths],capture_output=True,text=True).stdout.strip()
-    return d
-def _file_lastmod(path):
-    return _git_last_date([], [path])
-def _needle_lastmod(needle,path):
-    return _git_last_date(['-S',needle], [path])
+_SEO_SUBTREE_DATES=None
+_FAQ_SUBTREE_DATES=None
+def _i18n_subtree_dates():
+    global _SEO_SUBTREE_DATES,_FAQ_SUBTREE_DATES
+    if _SEO_SUBTREE_DATES is None:
+        cache={}
+        _SEO_SUBTREE_DATES=sitemap_lastmod.subtree_lastmods('tools/i18n/seo.json',cache=cache)
+        _FAQ_SUBTREE_DATES=sitemap_lastmod.subtree_lastmods('tools/i18n/faq.json',cache=cache)
+    return _SEO_SUBTREE_DATES,_FAQ_SUBTREE_DATES
 def ensure_git_history():
     """Sitemap lastmod needs real per-file history; shallow clones only see HEAD (wrong dates)."""
     env={**os.environ,'GIT_TERMINAL_PROMPT':'0'}
@@ -525,33 +524,21 @@ def ensure_git_history():
             return
     sys.exit('gen.py: shallow git clone and unshallow failed; full history is required for sitemap lastmod')
 def lastmod(l,p):
-    """Per-page content date: max of UI json, page-specific seo/faq slices, and hub-only extras (not whole-file seo bumps on unrelated URLs)."""
-    dates=[_file_lastmod(f'tools/i18n/{l}.json')]
-    if p=='privacy.html':
-        dates.append(_file_lastmod('tools/i18n/privacy.json'))
-    elif p=='licenses.html':
-        dates+=[_file_lastmod('tools/i18n/licenses-page.json'),_file_lastmod('licenses')]
-    elif p in PAGE_SEO:
-        key=PAGE_SEO[p]
-        sk, fk=SEO[l][key], FAQ[l][key]
-        for needle in (sk['title'],sk['h1'],sk['meta']):
-            d=_needle_lastmod(needle,'tools/i18n/seo.json')
-            if d: dates.append(d)
-        if fk:
-            d=_needle_lastmod(fk[0]['q'],'tools/i18n/faq.json')
-            if d: dates.append(d)
-        if p=='index.html':
-            dates+=[_file_lastmod(x) for x in ('tools/i18n/header.json','tools/i18n/interlink.json')]
-    dates=[d for d in dates if d]
-    if not dates:
+    """Per-page content date: subtree-aware seo/faq history plus other file sources (see sitemap_lastmod.py)."""
+    seo_d, faq_d=_i18n_subtree_dates()
+    d=sitemap_lastmod.page_lastmod(l,p,PAGE_SEO,seo_dates=seo_d,faq_dates=faq_d)
+    if not d:
         sys.exit(f'gen.py: no git commit date for {l}/{p} (sources: {sources(l,p)}); need full history, not HEAD fallback')
-    d=max(dates)
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), f'no git date for {l}/{p}'
     return d
 
 def write_sitemap(pages):
     """Emit sitemap.xml (15 tool URLs); lastmod from git history of each page's i18n sources."""
     ensure_git_history()
+    sitemap_lastmod.clear_json_cache()
+    global _SEO_SUBTREE_DATES,_FAQ_SUBTREE_DATES
+    _SEO_SUBTREE_DATES=_FAQ_SUBTREE_DATES=None
+    _i18n_subtree_dates()
     sm_pages=[(l,p) for l,p in pages if p not in DOC]
     assert len(sm_pages)==15, len(sm_pages)
     sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
