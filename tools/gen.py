@@ -445,8 +445,9 @@ def check_page(lang,p,s):
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):
         d=json.loads(j); assert 'aggregateRating' not in j
         if d['@type']=='FAQPage':
-            faq=re.search(r'<section class="faq[^"]*">(.*?)</section>',s,re.S)
-            fb=faq.group(1) if faq else s
+            faq=re.search(r'<section class="faq[^"]*"[^>]*>(.*?)</section>',s,re.S)
+            assert faq, f'FAQPage JSON-LD but no FAQ section in {lang}/{p}'
+            fb=faq.group(1)
             vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',fb)]
             va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',fb)]
             jq=[q['name'] for q in d['mainEntity']]; ja=[q['acceptedAnswer']['text'] for q in d['mainEntity']]
@@ -502,10 +503,10 @@ def lastmod(l,p):
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), f'no git date for {l}/{p}'
     return d
 
-def write_sitemap():
+def write_sitemap(pages):
     """Emit sitemap.xml (15 tool URLs); lastmod from git history of each page's i18n sources."""
     ensure_git_history()
-    sm_pages=[(l,p) for l in LANGS for p,k,m in TOOLS]
+    sm_pages=[(l,p) for l,p in pages if p not in DOC]
     assert len(sm_pages)==15, len(sm_pages)
     sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
         +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'
@@ -584,7 +585,7 @@ def build_site():
             f=lp(lang)+p
             if not os.path.exists(f) or open(f,encoding='utf-8').read()!=s: open(f,'w',encoding='utf-8').write(s)
             pages.append((lang,p))
-    sm=write_sitemap()
+    sm=write_sitemap(pages)
     print(len(pages),'pages,',len(sm),'sitemap URLs')
     print('llms:',', '.join(gen_llms()))
 
