@@ -16,26 +16,39 @@ PAGES = ['index.html', 'merge-pdf.html', 'split-pdf.html', 'organize-pdf.html',
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; "
        "worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'")
 ALLOWED_HOSTS = {'', 'noclaudkit.com', 'github.com', 'docs.github.com', 'schema.org', 'www.w3.org'}
-FT_HREFS = {
-    'en': ['/', '/image-converter/', '/pdf/', '/image-converter/heic-to-jpg.html',
-           'merge-pdf.html', 'split-pdf.html', 'jpg-to-pdf.html'],
-    'ru': ['/ru/', '/image-converter/ru/', '/pdf/ru/', '/image-converter/ru/heic-to-jpg.html',
-           'merge-pdf.html', 'split-pdf.html', 'jpg-to-pdf.html'],
-    'zh': ['/zh/', '/image-converter/zh/', '/pdf/zh/', '/image-converter/zh/heic-to-jpg.html',
-           'merge-pdf.html', 'split-pdf.html', 'jpg-to-pdf.html'],
-}
-FT_LABELS = {
-    'en': ['NoClaudKit', 'Image converter', 'PDF tools', 'HEIC to JPG', 'Merge PDF', 'Split PDF', 'JPG to PDF'],
-    'ru': ['NoClaudKit', 'Конвертер изображений', 'Инструменты для PDF', 'HEIC в JPG', 'Объединить PDF', 'Разделить PDF', 'JPG в PDF'],
-    'zh': ['NoClaudKit', '图片转换器', 'PDF 工具', 'HEIC 转 JPG', '合并 PDF', '拆分 PDF', '图片转 PDF'],
-}
+PAIRS = [('heic', 'jpg'), ('heic', 'png'), ('webp', 'png'), ('webp', 'jpg'),
+         ('avif', 'jpg'), ('avif', 'png'), ('png', 'webp'), ('jpg', 'webp')]
+PAIR_ABBR = [('heic', 'jpg', 'HEIC', 'JPG'), ('heic', 'png', 'HEIC', 'PNG'), ('webp', 'png', 'WebP', 'PNG'),
+             ('webp', 'jpg', 'WebP', 'JPG'), ('avif', 'jpg', 'AVIF', 'JPG'), ('avif', 'png', 'AVIF', 'PNG'),
+             ('png', 'webp', 'PNG', 'WebP'), ('jpg', 'webp', 'JPG', 'WebP')]
+PAIR_LINK = {'en': '{A} to {B}', 'ru': '{A}\u00a0в\u00a0{B}', 'zh': '{A} 转 {B}'}
+INTER = json.load(open('tools/i18n/interlink.json', encoding='utf-8'))
+UI = {l: json.load(open(f'tools/i18n/{l}.json', encoding='utf-8')) for l in LANGS}
+NB = '\u00a0'
+
+def norm(s):
+    return re.sub(r'\s+', ' ', html.unescape(s).replace(NB, ' ').replace('\u2011', '-')).strip()
+
+def ft_hrefs(lang):
+    p = '' if lang == 'en' else f'{lang}/'
+    conv, pdf = f'/image-converter/{p}', f'/pdf/{p}'
+    home = '/' if lang == 'en' else f'/{lang}/'
+    pairs = [f'{conv}{a}-to-{b}.html' for a, b in PAIRS]
+    return [home, conv, pdf] + pairs + ['merge-pdf.html', 'split-pdf.html', 'jpg-to-pdf.html']
+
+def ft_labels(lang):
+    t = INTER[lang]
+    pairs = [norm(PAIR_LINK[lang].format(A=A, B=B)) for *_, A, B in PAIR_ABBR]
+    return [norm(x) for x in (['NoClaudKit', UI[lang]['f_conv'], t['f_pdf']] + pairs + [t['ft_merge'], t['ft_split'], t['ft_jpg']])]
+
+FT_HREFS = {l: ft_hrefs(l) for l in LANGS}
+FT_LABELS = {l: ft_labels(l) for l in LANGS}
 CANON = {
     'en': 'https://noclaudkit.com/pdf/',
     'ru': 'https://noclaudkit.com/pdf/ru/',
     'zh': 'https://noclaudkit.com/pdf/zh/',
 }
 HREFLANG = {'en': 'en', 'ru': 'ru', 'zh': 'zh-Hans'}
-NB = '\u00a0'
 FAILS = []
 
 def lp(lang):
@@ -53,9 +66,6 @@ def fail(ac, msg):
 
 def ok(ac, msg):
     print('PASS', f'AC{ac}: {msg}')
-
-def norm(s):
-    return re.sub(r'\s+', ' ', html.unescape(s).replace(NB, ' ').replace('\u2011', '-')).strip()
 
 def site_lang(path):
     parts = [p for p in path.split('/') if p]
@@ -118,7 +128,7 @@ def ac1():
         for b in bad:
             fail(1, b)
     else:
-        ok(1, '21 pages have the 7-link same-language footer and no cross-language hrefs outside the switcher')
+        ok(1, '21 pages have the 14-link same-language footer and no cross-language hrefs outside the switcher')
 
 def ac3():
     bad = []
