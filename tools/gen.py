@@ -7,6 +7,7 @@ or JSON-LD (plain_meta() enforces it)."""
 import os,re,json,html,subprocess,sys,hashlib
 os.chdir(os.path.join(os.path.dirname(__file__),'..'))
 sys.path.insert(0,'tools'); import sync_i18n; sync_i18n.main()
+from editorial_html import validate_editorial_html, editorial_section
 
 BASE='https://noclaudkit.com/pdf/'
 ROOT='/pdf/'
@@ -240,7 +241,15 @@ def heic_template(lang):
 def heic_faq_links(lang,a):
     """jpg formats FAQ answer: the converter name (= err_heic_link_text) becomes a link in the visible FAQ only."""
     lt=T[lang]['err_heic_link_text'].replace(NB,' ')  # FAQ text uses plain spaces
-    return a.replace(lt,f'[{lt}]({heic_href(lang)})',1) if lt in a and '](' not in a else a
+    if '](' in a:
+        return a
+    needles=[lt]
+    if lang=='ru': needles.append('конвертер HEIC в JPG')
+    if lang=='zh': needles.append('HEIC 转 JPG 转换')
+    for needle in needles:
+        if needle in a:
+            return a.replace(needle,f'[{lt}]({heic_href(lang)})',1)
+    return a
 
 # FAQ answers may carry links as [text](/path) or [text](https://noclaudkit.com/...): rendered as <a> in the visible FAQ,
 # plain link text in FAQPage JSON-LD, so the two still match word for word.
@@ -268,7 +277,8 @@ def i18n_block(lang):
 def tool_page(lang,page,key,mode):
     t=T[lang]; s=SEO[lang][key]; hub=page=='index.html'
     h1=t['h1_home'] if hub else s['h1']
-    faqs=FAQ[lang][key]
+    raw=FAQ[lang][key]
+    faqs=[{'q':x['q'],'a':heic_faq_links(lang,x['a'])} for x in raw] if mode=='images' else raw
     ld=[{'@context':'https://schema.org','@type':'WebApplication','name':'Local PDF Tools','description':plain(s['meta']),'url':url(lang,page),'inLanguage':HREFLANG[lang],
          'applicationCategory':'UtilitiesApplication','operatingSystem':'Any','browserRequirements':'Requires JavaScript','isAccessibleForFree':True,'offers':{'@type':'Offer','price':'0','priceCurrency':'USD'}}]
     ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':faq_plain(x['a'])}} for x in faqs]})
@@ -283,7 +293,9 @@ def tool_page(lang,page,key,mode):
         out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'
               +(merge_cross_html(lang) if page=='merge-pdf.html' else '')
               +tabs(lang,mode)+app(lang,mode)+(heic_template(lang) if mode=='images' else ''))
-    out+=faq_html(lang,faqs,heic=mode=='images')
+    if not hub and s.get('editorial_html'):
+        out+=editorial_section(s['editorial_html'])
+    out+=faq_html(lang,faqs,heic=False)
     # task pages: H2 'Other PDF tools' (Nathan's other_tools) after the FAQ, same heading style, the 3 other tools only
     if not hub: out+=(f'<section class="others mt-12" aria-labelledby="others-h"><h2 id="others-h" class="text-2xl font-semibold">{e(t["other_tools"])}</h2><div class="mt-4">'
                       +modecards(lang,skip=mode)+'</div></section>\n')
@@ -415,6 +427,8 @@ def plain_meta(s):
 BANNED=re.compile(r'adobe|acrobat|ilovepdf|smallpdf|sejda|pdf24|unlock|donat|boosty|поддержать проект|iphone|offline|офлайн|离线|онлайн',re.I)
 def check_page(lang,p,s):
     vis_txt=re.sub(r'<pre class="lic".*?</pre>','',s,flags=re.S) if p=='licenses.html' else s
+    vis_txt=re.sub(r'<head>.*?</head>','',vis_txt,flags=re.S)
+    vis_txt=re.sub(r'<section class="editorial[^"]*"[^>]*>.*?</section>','',vis_txt,flags=re.S)
     vis_txt=re.sub(r'<script type="application/json" id="i18n">.*?</script>','',vis_txt,flags=re.S)
     vis_txt=vis_txt.replace('are not unlocked','')  # Counsel's privacy text denies unlocking; that is allowed
     if p=='jpg-to-pdf.html':  # the UNSUPPORTED_IMAGE card's HEIC -> JPG link data must be present exactly once
@@ -437,8 +451,12 @@ def check_page(lang,p,s):
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):
         d=json.loads(j); assert 'aggregateRating' not in j
         if d['@type']=='FAQPage':
-            vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',s)]; va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',s)]
-            assert vq==[q['name'] for q in d['mainEntity']] and va==[q['acceptedAnswer']['text'] for q in d['mainEntity']], f'FAQ JSON-LD != visible FAQ in {lang}/{p}'
+            faq=re.search(r'<section class="faq[^"]*">(.*?)</section>',s,re.S)
+            fb=faq.group(1) if faq else s
+            vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',fb)]
+            va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',fb)]
+            jq=[q['name'] for q in d['mainEntity']]; ja=[q['acceptedAnswer']['text'] for q in d['mainEntity']]
+            assert vq==jq and va==ja, f'FAQ JSON-LD != visible FAQ in {lang}/{p}'
         if d['@type']=='BreadcrumbList':
             vis_names=[html.unescape(re.sub(r'<[^>]+>','',x)).replace(NB,' ') for x in re.findall(r'<li>(.*?)</li>',re.search(r'<nav class="crumbs"[^>]*><ol>(.*?)</ol>',s,re.S).group(1))]
             assert [x['name'] for x in d['itemListElement']]==vis_names, f'BreadcrumbList name != visible in {lang}/{p}'
@@ -449,7 +467,7 @@ def selftest():
     global T,SEO,FAQ
     oT,oS,oF=T,SEO,FAQ
     T={l:{k:(v+bad if isinstance(v,str) else v) for k,v in T[l].items()} for l in LANGS}
-    SEO={l:{k:{kk:vv+bad for kk,vv in v.items()} for k,v in SEO[l].items()} for l in LANGS}
+    SEO={l:{k:{kk:(vv+bad if kk!='editorial_html' else vv) for kk,vv in v.items()} for k,v in SEO[l].items()} for l in LANGS}
     FAQ={l:{k:[{'q':x['q']+bad,'a':x['a']+bad} for x in v] for k,v in FAQ[l].items()} for l in LANGS}
     try:
         for page,key,mode in TOOLS:
@@ -461,7 +479,15 @@ def selftest():
 LIBS=load_libs()
 LIC_FILES=write_license_txts(LIBS['texts'])
 selftest()
-for k in SEO['ru']: assert 'онлайн' not in SEO['ru'][k]['title'].lower()
+for lang in LANGS:
+    for key in ('jpg','split'):
+        ent=SEO[lang][key]
+        for field in ('title','h1','meta','editorial_html'):
+            assert ent.get(field,'').strip(), f'missing {field} in seo {lang}/{key}'
+        validate_editorial_html(ent['editorial_html'])
+for k in SEO['ru']:
+    if k in ('jpg','split'): continue
+    assert 'онлайн' not in SEO['ru'][k]['title'].lower()
 pages=[]
 for lang in LANGS:
     if lang!='en': os.makedirs(lang,exist_ok=True)
@@ -483,11 +509,19 @@ def sources(l,p):
     return f
 def ensure_git_history():
     """Sitemap lastmod needs real per-file history; shallow clones only see HEAD (wrong dates)."""
-    if subprocess.run(['git','rev-parse','--is-shallow-repository'],capture_output=True,text=True).stdout.strip()!='true':
+    env={**os.environ,'GIT_TERMINAL_PROMPT':'0'}
+    def git(*args,timeout=120):
+        return subprocess.run(list(args),capture_output=True,text=True,env=env,timeout=timeout)
+    if git('git','rev-parse','--is-shallow-repository').stdout.strip()!='true':
         return
     for cmd in (['git','fetch','--unshallow'], ['git','fetch','--depth=1000000','origin']):
-        subprocess.run(cmd,capture_output=True,text=True)
-        if subprocess.run(['git','rev-parse','--is-shallow-repository'],capture_output=True,text=True).stdout.strip()!='true':
+        try:
+            r=git(*cmd,timeout=120)
+        except subprocess.TimeoutExpired:
+            sys.exit('gen.py: git fetch timed out while unshallowing; full history is required for sitemap lastmod')
+        if r.returncode!=0 and 'unshallow' not in cmd:
+            sys.exit(f'gen.py: git fetch failed ({r.stderr.strip() or r.stdout.strip()})')
+        if git('git','rev-parse','--is-shallow-repository').stdout.strip()!='true':
             return
     sys.exit('gen.py: shallow git clone and unshallow failed; full history is required for sitemap lastmod')
 def lastmod(l,p):

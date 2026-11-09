@@ -11,9 +11,10 @@
    "meta": "Combine PDF files into one in your browser. Nothing is uploaded: documents stay on your device. Free, no sign-up, no watermark."
   },
   "split": {
-   "title": "Split PDF without uploading, free · NoClaudKit",
-   "h1": "Split a PDF and extract pages",
-   "meta": "Split a PDF into separate files or extract the pages you need, right in your browser. No upload, no sign-up, no watermark."
+   "title": "Split one PDF into 2 files online free — no upload",
+   "h1": "Split a PDF into separate files",
+   "meta": "Split one PDF into 2 or more files, or extract pages, in your browser. Ranges, every N pages, or pick pages. No upload, free, no watermark.",
+   "editorial_html": "<p>Use this page when you need to make one PDF into two (or more) files, extract a range, or pull selected pages into a new PDF. Splitting runs in the browser on your device — the file is not uploaded. No sign-up, no watermark, no cookies on the tool page.</p><p>Add one PDF (up to 100 MB). Choose a mode: By ranges (for example 1-3, 5, 8-10 — each range becomes its own file), Every N pages (cut the document into equal chunks), or Extract pages (select thumbnails to build one new PDF). For multi-file results, download comes as a ZIP. The tool shows the planned parts before you confirm.</p><p>Limits checked in the app: at most 1,000 pages in one output part, 5,000 pages across all parts in one run, and 50 parts. Password-protected PDFs are not opened — remove the password elsewhere first. New files do not keep Author, Creator, Producer, or XMP metadata; fonts, ICC profiles, and embedded images needed to show pages are kept. Form fields (and typed values), attachments, and JavaScript are not copied. Web and email links are kept; in-document page jumps and comments are removed.</p><p>Search phrasing varies: “make one pdf into 2”, “1 pdf to 2 pdf”, “pdf to pdf split”, “split PDF online”. If the goal is cutting or extracting pages without an upload service, this page matches. To glue files back together use <a href=\"/pdf/merge-pdf.html\">merge PDF</a>; to reorder without splitting use <a href=\"/pdf/organize-pdf.html\">reorder pages</a>.</p><p>Pick the mode that matches the job, check the preview of parts, then split. If something fails, check file size, encryption, and page counts against the limits above.</p>"
   },
   "organize": {
    "title": "Reorder PDF pages: rearrange, delete, rotate · NoClaudKit",
@@ -21,9 +22,10 @@
    "meta": "Drag pages to rearrange a PDF, delete or rotate pages, then save. Runs in your browser, files are never uploaded. Free, no watermark."
   },
   "jpg": {
-   "title": "JPG to PDF without uploading, free · NoClaudKit",
-   "h1": "JPG and photos to PDF",
-   "meta": "Turn JPG and PNG images into one PDF in your browser. Choose order and page size. No upload, no sign-up, no watermark."
+   "title": "JPG to PDF online free — combine photos, no upload",
+   "h1": "Combine JPG and PNG into one PDF",
+   "meta": "Free JPG to PDF in your browser: merge photos into one file, pick order and A4 or fit-to-image. No upload, no sign-up, no watermark.",
+   "editorial_html": "<p>This page turns JPG and PNG images into one PDF entirely in your browser. Files are not uploaded to a server. There is no account, no watermark, and no cookies on the tool page.</p><p>How to use it: add up to 50 JPG or PNG files (or drop them on the page), drag or use the move buttons to set page order, choose page size — A4 or same as each image — then press Create PDF and download. Each image can be up to 50 megapixels. A single file can be up to 100 MB; all files together up to 300 MB.</p><p>Quality stays the same: JPG images are placed in the PDF without re-compression, and PNG images are stored losslessly. EXIF and GPS location are removed from photos before they go into the PDF. HEIC from iPhone is not accepted here — convert HEIC to JPG first with the <a href=\"/image-converter/heic-to-jpg.html\">HEIC to JPG</a> tool, then come back.</p><p>People look for “combine JPG into PDF”, “photos to PDF”, or “JPG to PDF online”. If you need several images as pages of one document for email, print, or forms, this is the page. For PDF-only jobs see <a href=\"/pdf/merge-pdf.html\">merge PDF</a>, <a href=\"/pdf/split-pdf.html\">split PDF</a>, or <a href=\"/pdf/organize-pdf.html\">reorder pages</a>.</p><p>Everything runs locally on your device. Use it when you do not want to send photos to an upload service. If a file fails, check size and format (JPG/PNG only), or try another browser.</p>"
   }
  },
  "ru": {
@@ -38,9 +40,10 @@
    "meta": "Соедините несколько PDF в один прямо в браузере. Файлы не покидают устройство. Бесплатно, без регистрации и водяных знаков."
   },
   "split": {
-   "title": "Разделить PDF без загрузки на сервер · NoClaudKit",
-   "h1": "Разделить PDF и извлечь страницы",
-   "meta": "Разделите PDF на отдельные файлы или извлеките нужные страницы прямо в браузере. Файлы не покидают устройство. Бесплатно, без регистрации."
+   "title": "Разделить PDF на 2 файла онлайн — без загрузки на сервер",
+   "h1": "Разделить PDF на отдельные файлы",
+   "meta": "Разделить один PDF на 2 и более файла или извлечь страницы в браузере: диапазоны, каждые N страниц или выбор. Без загрузки на сервер, бесплатно.",
+   "editorial_html": "<p>Страница нужна, когда из одного PDF надо сделать два (или больше) файла, вырезать диапазон или собрать выбранные страницы в новый PDF. Разделение идёт в браузере на устройстве — файл на сервер не уходит. Без регистрации, без водяного знака, без cookie на странице инструмента.</p><p>Добавьте один PDF (до 100 МБ). Режим: «По диапазонам» (например 1-3, 5, 8-10 — каждый диапазон своим файлом), «Каждые N страниц» или «Извлечь страницы» (отметьте миниатюры → один новый PDF). Если файлов несколько, они скачиваются ZIP. План частей виден до подтверждения.</p><p>Лимиты в приложении: не больше 1000 страниц в одной части, 5000 страниц суммарно за один запуск и 50 частей. Запароленные PDF не открываются — сначала снимите пароль в другой программе. В новые файлы не переносятся Author, Creator, Producer и XMP; шрифты, ICC и встроенные изображения для показа страниц сохраняются. Поля форм (и введённые значения), вложения и JavaScript не копируются. Веб- и email-ссылки остаются; переходы на другие страницы документа и комментарии убираются.</p><p>В поиске пишут «разделить pdf на 2», «сделать из одного pdf два», «pdf to pdf split». Если задача — разрезать или извлечь страницы без загрузки на чужой сервис, вы здесь. Склеить обратно: <a href=\"/pdf/ru/merge-pdf.html\">объединить PDF</a>. Поменять порядок без разрезания: <a href=\"/pdf/ru/organize-pdf.html\">упорядочить страницы</a>.</p><p>Выберите режим, проверьте список частей и нажмите «Разделить». Если ошибка — сверьте размер, шифрование и число страниц с лимитами выше.</p>"
   },
   "organize": {
    "title": "Поменять страницы PDF местами и удалить · NoClaudKit",
@@ -48,9 +51,10 @@
    "meta": "Перетащите страницы, чтобы поменять их местами, удалите или поверните лишние и сохраните PDF. Всё в браузере, файлы не покидают устройство."
   },
   "jpg": {
-   "title": "JPG и фото в PDF без загрузки на сервер · NoClaudKit",
-   "h1": "Фото и JPG в PDF",
-   "meta": "Соберите один PDF из JPG и PNG прямо в браузере. Выберите порядок и размер страницы. Файлы не покидают устройство. Бесплатно."
+   "title": "Объединить JPG в PDF онлайн бесплатно — без загрузки",
+   "h1": "Объединить JPG и PNG в один PDF",
+   "meta": "Бесплатно объединить JPG в PDF в браузере: несколько фото в один файл, порядок и A4 или размер картинки. Без загрузки на сервер и без регистрации.",
+   "editorial_html": "<p>На этой странице из JPG и PNG собирается один PDF прямо в браузере. Файлы не отправляются на сервер. Аккаунт не нужен, водяного знака нет, cookie на странице инструмента нет.</p><p>Как сделать. Добавьте до 50 файлов JPG или PNG (или перетащите на страницу). Задайте порядок перетаскиванием или кнопками. Выберите размер страницы: A4 или «как у изображения». Нажмите «Создать PDF» и скачайте результат. Каждая картинка — до 50 мегапикселей. Один файл — до 100 МБ, все вместе — до 300 МБ.</p><p>Качество не ухудшается: JPG вставляются без повторного сжатия, PNG сохраняются без потерь. EXIF и геолокация из фото удаляются до попадания в PDF. HEIC с iPhone сюда не принимается — сначала <a href=\"/image-converter/ru/heic-to-jpg.html\">HEIC в JPG</a>, потом снова эта страница.</p><p>В поиске тот же сценарий часто пишут как «объединить jpg в pdf», «фото в pdf», «несколько jpg в один pdf». Если нужно несколько снимков страницами одного документа для почты, печати или анкеты — вы на нужной странице. Для работы только с PDF рядом есть <a href=\"/pdf/ru/merge-pdf.html\">объединить PDF</a>, <a href=\"/pdf/ru/split-pdf.html\">разделить PDF</a> и <a href=\"/pdf/ru/organize-pdf.html\">упорядочить страницы</a>.</p><p>Всё выполняется на устройстве. Удобно, когда не хотите отдавать фото сервису с загрузкой на сервер. Если файл не принялся, проверьте формат (только JPG/PNG) и размер либо попробуйте другой браузер.</p>"
   }
  },
  "zh": {
@@ -65,9 +69,10 @@
    "meta": "在浏览器中把多个 PDF 合并为一个，文件不会离开您的设备。免费、无需注册、无水印。"
   },
   "split": {
-   "title": "拆分 PDF，提取页面，无需上传 · NoClaudKit",
-   "h1": "拆分 PDF 并提取页面",
-   "meta": "在浏览器中把 PDF 拆分成多个文件或提取所需页面。文件不会离开您的设备。免费、无需注册、无水印。"
+   "title": "拆分 PDF 成 2 个文件｜在线免费、不上传",
+   "h1": "把一个 PDF 拆成多个文件",
+   "meta": "在浏览器中把一个 PDF 拆成 2 个或更多文件，或提取页面：按范围、每 N 页或点选。不上传、免费、无水印。",
+   "editorial_html": "<p>需要把一个 PDF 拆成两个（或多个）文件、按范围导出，或点选页面生成新 PDF 时用本页。拆分在浏览器本地完成，文件不会上传。无需注册，无水印，工具页无 Cookie。</p><p>添加一个 PDF（不超过 100 MB）。模式：「按范围」（如 1-3, 5, 8-10，每个范围一个文件）、「每 N 页」，或「提取页面」（在缩略图上勾选，得到一个新 PDF）。多个结果会打成 ZIP 下载。确认前会显示计划中的分册。</p><p>应用内限制：单个输出分册最多 1000 页，一次合计最多 5000 页、最多 50 个分册。不打开带密码的 PDF——请先在其他软件中移除密码。新文件不保留 Author、Creator、Producer 与 XMP；显示页面所需的字体、ICC 与内嵌图片会保留。表单字段（及填写内容）、附件和 JavaScript 不复制。网页与邮件链接保留；文档内跳转链接和注释会去掉。</p><p>搜索里常见 “make one pdf into 2”“拆分 PDF”“pdf to pdf split”。若目标是本地切割或提取页面，即用本页。重新合并用 <a href=\"/pdf/zh/merge-pdf.html\">合并 PDF</a>；只改顺序用 <a href=\"/pdf/zh/organize-pdf.html\">页面排序</a>。</p><p>选好模式、核对分册预览后再拆分。若失败，请对照上述大小、加密与页数限制检查文件。</p>"
   },
   "organize": {
    "title": "PDF 页面排序、删除、旋转，无需上传 · NoClaudKit",
@@ -75,9 +80,10 @@
    "meta": "拖动页面调整 PDF 顺序，删除或旋转页面后保存。全部在浏览器中完成，文件不会离开您的设备。"
   },
   "jpg": {
-   "title": "图片转 PDF，JPG 转 PDF，无需上传 · NoClaudKit",
-   "h1": "JPG 和照片转 PDF",
-   "meta": "在浏览器中把 JPG 和 PNG 图片合成一个 PDF，可调整顺序和页面大小。文件不会离开您的设备。免费。"
+   "title": "JPG 转 PDF 在线免费｜合并照片、不上传",
+   "h1": "把 JPG 和 PNG 合并成一个 PDF",
+   "meta": "免费在浏览器中把多张 JPG/PNG 合成一个 PDF，可调顺序，可选 A4 或按图片尺寸。不上传、无需注册、无水印。",
+   "editorial_html": "<p>本页在浏览器中把 JPG 和 PNG 做成一个 PDF。文件不会上传到服务器。无需账号，无水印，工具页无 Cookie。</p><p>用法：一次最多添加 50 张 JPG 或 PNG（或拖放到页面），用拖动或移动按钮排好顺序，选择页面大小（A4 或与图片相同），点击“创建 PDF”并下载。每张图不超过 50 兆像素；单个文件不超过 100 MB，合计不超过 300 MB。</p><p>画质不变：JPG 放入 PDF 时不会被重新压缩，PNG 无损保存。照片的 EXIF 与 GPS 会在写入 PDF 前删除。不接受 HEIC——请先用 <a href=\"/image-converter/zh/heic-to-jpg.html\">HEIC 转 JPG</a>，再回到本页。</p><p>适合“多张 JPG 合成 PDF”“照片转 PDF”等需求。若只处理已有 PDF，可用 <a href=\"/pdf/zh/merge-pdf.html\">合并 PDF</a>、<a href=\"/pdf/zh/split-pdf.html\">拆分 PDF</a> 或 <a href=\"/pdf/zh/organize-pdf.html\">页面排序</a>。</p><p>全部在本地完成，适合不想把照片传到上传型网站的场景。若添加失败，请确认格式仅为 JPG/PNG 以及文件大小，或换浏览器再试。</p>"
   }
  }
 }
