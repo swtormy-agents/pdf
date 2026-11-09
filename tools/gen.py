@@ -7,6 +7,8 @@ or JSON-LD (plain_meta() enforces it)."""
 import os,re,json,html,subprocess,sys,hashlib
 os.chdir(os.path.join(os.path.dirname(__file__),'..'))
 sys.path.insert(0,'tools'); import sync_i18n; sync_i18n.main()
+from editorial_html import validate_editorial_html, editorial_section
+from faq_markup import faq_answer_html, faq_plain
 
 BASE='https://noclaudkit.com/pdf/'
 ROOT='/pdf/'
@@ -238,19 +240,22 @@ def heic_template(lang):
     t=T[lang]
     return f'<template id="heic-strings"><span data-k="fix">{e(t["err_heic_fix"])}</span><span data-k="text">{e(t["err_heic_link_text"])}</span></template>\n'
 def heic_faq_links(lang,a):
-    """jpg formats FAQ answer: the converter name (= err_heic_link_text) becomes a link in the visible FAQ only."""
-    lt=T[lang]['err_heic_link_text'].replace(NB,' ')  # FAQ text uses plain spaces
-    return a.replace(lt,f'[{lt}]({heic_href(lang)})',1) if lt in a and '](' not in a else a
+    """Wrap a phrase from the copywriter FAQ in a link; visible and JSON-LD text stay verbatim."""
+    if '](' in a:
+        return a
+    needles=[]
+    if lang=='ru':
+        needles.append('конвертер HEIC в JPG')
+    elif lang=='zh':
+        needles.append('HEIC 转 JPG 转换')
+    needles.append(T[lang]['err_heic_link_text'].replace(NB,' '))
+    for needle in needles:
+        if needle in a:
+            return a.replace(needle, f'[{needle}]({heic_href(lang)})', 1)
+    return a
 
-# FAQ answers may carry links as [text](/path) or [text](https://noclaudkit.com/...): rendered as <a> in the visible FAQ,
-# plain link text in FAQPage JSON-LD, so the two still match word for word.
-FAQ_LINK=re.compile(r'\[([^\]]+)\]\(((?:https://noclaudkit\.com)?/[^)\s]*)\)')
-def faq_plain(a): return FAQ_LINK.sub(lambda m:m.group(1),a)
-def faq_answer_html(a):
-    out,pos='',0
-    for m in FAQ_LINK.finditer(a):
-        out+=e(a[pos:m.start()])+f'<a class="link link-primary" href="{e(m.group(2))}">{e(m.group(1))}</a>'; pos=m.end()
-    return out+e(a[pos:])
+# FAQ answers may carry links as [text](/path) or [text](https://noclaudkit.com/...): rendered as <a> in the visible FAQ.
+# FAQPage JSON-LD uses the plain faq.json source string (no link markup); visible plain text must match it.
 def faq_html(lang,items,heic=False):
     t=T[lang]
     if heic: items=[{'q':x['q'],'a':heic_faq_links(lang,x['a'])} for x in items]
@@ -268,10 +273,11 @@ def i18n_block(lang):
 def tool_page(lang,page,key,mode):
     t=T[lang]; s=SEO[lang][key]; hub=page=='index.html'
     h1=t['h1_home'] if hub else s['h1']
-    faqs=FAQ[lang][key]
+    raw=FAQ[lang][key]
+    faqs=[{'q':x['q'],'a':heic_faq_links(lang,x['a'])} for x in raw] if mode=='images' else raw
     ld=[{'@context':'https://schema.org','@type':'WebApplication','name':'Local PDF Tools','description':plain(s['meta']),'url':url(lang,page),'inLanguage':HREFLANG[lang],
          'applicationCategory':'UtilitiesApplication','operatingSystem':'Any','browserRequirements':'Requires JavaScript','isAccessibleForFree':True,'offers':{'@type':'Offer','price':'0','priceCurrency':'USD'}}]
-    ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':faq_plain(x['a'])}} for x in faqs]})
+    ld.append({'@context':'https://schema.org','@type':'FAQPage','mainEntity':[{'@type':'Question','name':x['q'],'acceptedAnswer':{'@type':'Answer','text':x['a']}} for x in raw]})
     ld.append(crumbs_ld(lang,page))
     P='' if lang=='en' else '../'
     attrs=(heic_attrs(lang) if mode=='images' else '')+f' data-lang="{HREFLANG[lang]}" data-worker="{P}assets/worker.js" data-pdfjs="{P}assets/vendor/pdf.min.js" data-pdfjs-worker="{P}assets/vendor/pdf.worker.min.js"'
@@ -283,7 +289,9 @@ def tool_page(lang,page,key,mode):
         out+=(f'<h1 id="h1" class="h1">{e(vis(lang,h1))}</h1><p class="lede">{e(vis(lang,s["meta"]))}</p>\n'
               +(merge_cross_html(lang) if page=='merge-pdf.html' else '')
               +tabs(lang,mode)+app(lang,mode)+(heic_template(lang) if mode=='images' else ''))
-    out+=faq_html(lang,faqs,heic=mode=='images')
+    if not hub and s.get('editorial_html'):
+        out+=editorial_section(s['editorial_html'])
+    out+=faq_html(lang,faqs,heic=False)
     # task pages: H2 'Other PDF tools' (Nathan's other_tools) after the FAQ, same heading style, the 3 other tools only
     if not hub: out+=(f'<section class="others mt-12" aria-labelledby="others-h"><h2 id="others-h" class="text-2xl font-semibold">{e(t["other_tools"])}</h2><div class="mt-4">'
                       +modecards(lang,skip=mode)+'</div></section>\n')
@@ -437,8 +445,12 @@ def check_page(lang,p,s):
     for j in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S):
         d=json.loads(j); assert 'aggregateRating' not in j
         if d['@type']=='FAQPage':
-            vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',s)]; va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',s)]
-            assert vq==[q['name'] for q in d['mainEntity']] and va==[q['acceptedAnswer']['text'] for q in d['mainEntity']], f'FAQ JSON-LD != visible FAQ in {lang}/{p}'
+            faq=re.search(r'<section class="faq[^"]*">(.*?)</section>',s,re.S)
+            fb=faq.group(1) if faq else s
+            vq=[html.unescape(x) for x in re.findall(r'<summary class="collapse-title[^"]*">(.*?)</summary>',fb)]
+            va=[html.unescape(re.sub(r'<[^>]+>','',x)) for x in re.findall(r'<div class="collapse-content"><p>(.*?)</p>',fb)]
+            jq=[q['name'] for q in d['mainEntity']]; ja=[q['acceptedAnswer']['text'] for q in d['mainEntity']]
+            assert vq==jq and va==ja, f'FAQ JSON-LD != visible FAQ in {lang}/{p}'
         if d['@type']=='BreadcrumbList':
             vis_names=[html.unescape(re.sub(r'<[^>]+>','',x)).replace(NB,' ') for x in re.findall(r'<li>(.*?)</li>',re.search(r'<nav class="crumbs"[^>]*><ol>(.*?)</ol>',s,re.S).group(1))]
             assert [x['name'] for x in d['itemListElement']]==vis_names, f'BreadcrumbList name != visible in {lang}/{p}'
@@ -449,7 +461,7 @@ def selftest():
     global T,SEO,FAQ
     oT,oS,oF=T,SEO,FAQ
     T={l:{k:(v+bad if isinstance(v,str) else v) for k,v in T[l].items()} for l in LANGS}
-    SEO={l:{k:{kk:vv+bad for kk,vv in v.items()} for k,v in SEO[l].items()} for l in LANGS}
+    SEO={l:{k:{kk:(vv+bad if kk!='editorial_html' else vv) for kk,vv in v.items()} for k,v in SEO[l].items()} for l in LANGS}
     FAQ={l:{k:[{'q':x['q']+bad,'a':x['a']+bad} for x in v] for k,v in FAQ[l].items()} for l in LANGS}
     try:
         for page,key,mode in TOOLS:
@@ -457,21 +469,6 @@ def selftest():
             assert '<script>alert' not in s, f'unescaped test string in {page}'
             for m in re.findall(r'<script type="application/ld\+json">(.*?)</script>',s,re.S): assert '<' not in m and '>' not in m and '&' not in m
     finally: T,SEO,FAQ=oT,oS,oF
-
-LIBS=load_libs()
-LIC_FILES=write_license_txts(LIBS['texts'])
-selftest()
-for k in SEO['ru']: assert 'онлайн' not in SEO['ru'][k]['title'].lower()
-pages=[]
-for lang in LANGS:
-    if lang!='en': os.makedirs(lang,exist_ok=True)
-    out={p:tool_page(lang,p,k,m) for p,k,m in TOOLS}
-    out['privacy.html']=privacy_page(lang); out['licenses.html']=licenses_page(lang)
-    for p,s in out.items():
-        plain_meta(s); check_page(lang,p,s)
-        f=lp(lang)+p
-        if not os.path.exists(f) or open(f,encoding='utf-8').read()!=s: open(f,'w',encoding='utf-8').write(s)
-        pages.append((lang,p))
 
 def sources(l,p):
     """Content files whose last commit becomes <lastmod> (not gen.py or a single build stamp)."""
@@ -483,11 +480,19 @@ def sources(l,p):
     return f
 def ensure_git_history():
     """Sitemap lastmod needs real per-file history; shallow clones only see HEAD (wrong dates)."""
-    if subprocess.run(['git','rev-parse','--is-shallow-repository'],capture_output=True,text=True).stdout.strip()!='true':
+    env={**os.environ,'GIT_TERMINAL_PROMPT':'0'}
+    def git(*args,timeout=120):
+        return subprocess.run(list(args),capture_output=True,text=True,env=env,timeout=timeout)
+    if git('git','rev-parse','--is-shallow-repository').stdout.strip()!='true':
         return
     for cmd in (['git','fetch','--unshallow'], ['git','fetch','--depth=1000000','origin']):
-        subprocess.run(cmd,capture_output=True,text=True)
-        if subprocess.run(['git','rev-parse','--is-shallow-repository'],capture_output=True,text=True).stdout.strip()!='true':
+        try:
+            r=git(*cmd,timeout=120)
+        except subprocess.TimeoutExpired:
+            sys.exit('gen.py: git fetch timed out while unshallowing; full history is required for sitemap lastmod')
+        if r.returncode!=0 and 'unshallow' not in cmd:
+            sys.exit(f'gen.py: git fetch failed ({r.stderr.strip() or r.stdout.strip()})')
+        if git('git','rev-parse','--is-shallow-repository').stdout.strip()!='true':
             return
     sys.exit('gen.py: shallow git clone and unshallow failed; full history is required for sitemap lastmod')
 def lastmod(l,p):
@@ -496,13 +501,19 @@ def lastmod(l,p):
         sys.exit(f'gen.py: no git commit date for {l}/{p} (sources: {sources(l,p)}); need full history, not HEAD fallback')
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',d), f'no git date for {l}/{p}'
     return d
-ensure_git_history()
-SM=[(l,p) for l,p in pages if p not in DOC]  # privacy + licences: footer links only, not sitemap (SEO #8)
-assert len(SM)==15, len(SM)
-sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
- +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'+''.join(f'<xhtml:link rel="alternate" hreflang="{HREFLANG[x]}" href="{url(x,p)}"/>' for x in LANGS)+f'<xhtml:link rel="alternate" hreflang="x-default" href="{url("en",p)}"/></url>\n' for l,p in SM)+'</urlset>\n')
-if not os.path.exists('sitemap.xml') or open('sitemap.xml').read()!=sm: open('sitemap.xml','w').write(sm)
-print(len(pages),'pages,',len(SM),'sitemap URLs')
+
+def write_sitemap():
+    """Emit sitemap.xml (15 tool URLs); lastmod from git history of each page's i18n sources."""
+    ensure_git_history()
+    sm_pages=[(l,p) for l in LANGS for p,k,m in TOOLS]
+    assert len(sm_pages)==15, len(sm_pages)
+    sm=('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
+        +''.join(f'<url><loc>{url(l,p)}</loc><lastmod>{lastmod(l,p)}</lastmod>'
+                 +''.join(f'<xhtml:link rel="alternate" hreflang="{HREFLANG[x]}" href="{url(x,p)}"/>' for x in LANGS)
+                 +f'<xhtml:link rel="alternate" hreflang="x-default" href="{url("en",p)}"/></url>\n' for l,p in sm_pages)+'</urlset>\n')
+    if not os.path.exists('sitemap.xml') or open('sitemap.xml').read()!=sm:
+        open('sitemap.xml','w').write(sm)
+    return sm_pages
 
 # ---------- llms.txt + Markdown twins for AI agents (en only; Sergey Barrow) ----------
 # Same en strings as the HTML pages; links are canonical sitemap URLs only; the .md/.txt files are NOT in the sitemap
@@ -549,4 +560,33 @@ def gen_llms():
     files['llms.txt']=txt
     for p,s in files.items(): w(p,s)
     return sorted(files)
-print('llms:',', '.join(gen_llms()))
+
+def build_site():
+    global LIBS, LIC_FILES
+    LIBS=load_libs()
+    LIC_FILES=write_license_txts(LIBS['texts'])
+    selftest()
+    for lang in LANGS:
+        for key in ('jpg','split'):
+            ent=SEO[lang][key]
+            for field in ('title','h1','meta','editorial_html'):
+                assert ent.get(field,'').strip(), f'missing {field} in seo {lang}/{key}'
+            validate_editorial_html(ent['editorial_html'])
+    for k in SEO['ru']:
+        assert 'онлайн' not in SEO['ru'][k]['title'].lower()
+    pages=[]
+    for lang in LANGS:
+        if lang!='en': os.makedirs(lang,exist_ok=True)
+        out={p:tool_page(lang,p,k,m) for p,k,m in TOOLS}
+        out['privacy.html']=privacy_page(lang); out['licenses.html']=licenses_page(lang)
+        for p,s in out.items():
+            plain_meta(s); check_page(lang,p,s)
+            f=lp(lang)+p
+            if not os.path.exists(f) or open(f,encoding='utf-8').read()!=s: open(f,'w',encoding='utf-8').write(s)
+            pages.append((lang,p))
+    sm=write_sitemap()
+    print(len(pages),'pages,',len(sm),'sitemap URLs')
+    print('llms:',', '.join(gen_llms()))
+
+if __name__=='__main__':
+    build_site()

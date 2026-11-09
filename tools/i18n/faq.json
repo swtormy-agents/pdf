@@ -50,16 +50,16 @@
   ],
   "split": [
    {
-    "q": "How do I split a PDF into separate files?",
-    "a": "Add your PDF and choose \"By ranges\" or \"Every N pages\". Press Split, and the files download together in one ZIP."
+    "q": "How do I split one PDF into 2 files?",
+    "a": "Add the PDF, choose By ranges (for example 1-5, 6-10) or Every N pages, press Split. Multiple outputs download together in one ZIP."
    },
    {
-    "q": "How do I extract a single page or a page range from a PDF?",
-    "a": "Choose \"Extract pages\" and select the pages you need on the previews; they are saved as one new PDF. You can also type a single page, like 5, or a range, like 2-4, under \"By ranges\"."
+    "q": "How do I extract a single page or a page range?",
+    "a": "Choose Extract pages and select thumbnails to save one new PDF, or type a page/range under By ranges (for example 5 or 2-4)."
    },
    {
-    "q": "How do I enter page ranges to split a PDF?",
-    "a": "Separate pages with commas and write ranges with a hyphen, for example 1-3, 5, 8-10. That example makes three files, and the tool shows the result before you split."
+    "q": "How do I enter page ranges?",
+    "a": "Separate items with commas and ranges with a hyphen, e.g. 1-3, 5, 8-10. That example makes three files; the plan is shown before you split."
    },
    {
     "q": "Can I split a confidential PDF without uploading it?",
@@ -67,7 +67,11 @@
    },
    {
     "q": "Does a split PDF keep the original metadata?",
-    "a": "No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Data needed to display the pages, for example fonts, ICC profiles, and JPEG 2000 or inline images, is kept as is. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed."
+    "a": "No. Author, Creator, Producer and XMP are not carried over. Display data such as fonts, ICC profiles and embedded images is kept. Forms, attachments and JavaScript are not copied."
+   },
+   {
+    "q": "What are the size and page limits?",
+    "a": "One file up to 100 MB. Per run: up to 1,000 pages per output part, 5,000 pages across all parts, and up to 50 parts. Password-protected PDFs are not supported."
    }
   ],
   "organize": [
@@ -95,27 +99,27 @@
   "jpg": [
    {
     "q": "How do I convert JPG to PDF?",
-    "a": "Choose your JPG or PNG images or drop them on the page. Set the order and page size, press Create PDF and download the file."
-   },
-   {
-    "q": "Which image formats can I convert to PDF?",
-    "a": "You can convert JPG and PNG images. Each image can be up to 50 megapixels. If your photos are in HEIC format, convert them to JPG first with our HEIC to JPG converter."
+    "a": "Choose JPG or PNG images or drop them on the page. Set the order and page size (A4 or same as image), press Create PDF, and download the file."
    },
    {
     "q": "Can I combine several JPG images into one PDF?",
-    "a": "Yes. Add up to 50 images at once, drag them or use the move buttons to set the order, and they become pages of one PDF."
+    "a": "Yes. Add up to 50 images at once, drag them or use the move buttons to set the order, and each image becomes a page of one PDF."
    },
    {
-    "q": "What page size does the JPG to PDF converter use?",
+    "q": "Which image formats can I convert to PDF?",
+    "a": "JPG and PNG only. Each image can be up to 50 megapixels. For HEIC photos, convert them to JPG first with our HEIC to JPG converter."
+   },
+   {
+    "q": "What page size does the converter use?",
     "a": "You can choose A4 or make each page match the size of its image."
    },
    {
     "q": "Does converting JPG to PDF reduce image quality?",
-    "a": "No. JPG images are placed in the PDF without re-compression, and PNG images are stored losslessly, so quality stays the same."
+    "a": "No. JPG images are placed without re-compression, and PNG images are stored losslessly."
    },
    {
     "q": "Is location data from my photos kept in the PDF?",
-    "a": "No. EXIF data and GPS location are removed from the photos before they go into the PDF."
+    "a": "No. EXIF and GPS location are removed from the photos before they go into the PDF."
    }
   ]
  },
@@ -170,24 +174,28 @@
   ],
   "split": [
    {
-    "q": "Как разделить PDF на отдельные файлы?",
-    "a": "Добавьте PDF и выберите «По диапазонам» или «Каждые N страниц». Нажмите «Разделить» — файлы скачаются вместе одним ZIP-архивом."
+    "q": "Как разделить один PDF на 2 файла?",
+    "a": "Добавьте PDF, выберите «По диапазонам» (например 1-5, 6-10) или «Каждые N страниц», нажмите «Разделить». Несколько файлов скачаются одним ZIP."
    },
    {
-    "q": "Как извлечь из PDF одну страницу или несколько подряд?",
-    "a": "Выберите «Извлечь страницы» и отметьте нужные страницы на миниатюрах — они сохранятся в один новый PDF. Можно и в режиме «По диапазонам» указать одну страницу, например 5, или диапазон, например 2-4."
+    "q": "Как извлечь одну страницу или диапазон?",
+    "a": "Режим «Извлечь страницы» и отметки на миниатюрах дают один новый PDF. Либо в «По диапазонам» укажите страницу или диапазон, например 5 или 2-4."
    },
    {
-    "q": "Как указать диапазоны страниц для разделения?",
-    "a": "Перечислите страницы через запятую, а диапазоны укажите через дефис, например: 1-3, 5, 8-10. Из этого примера получится три файла, а результат будет виден ещё до разделения."
+    "q": "Как записывать диапазоны страниц?",
+    "a": "Через запятую, диапазоны через дефис: 1-3, 5, 8-10. Из примера выйдут три файла; план виден до разделения."
    },
    {
-    "q": "Можно ли разделить конфиденциальный PDF, не загружая его?",
-    "a": "Да. PDF разделяется в браузере на вашем устройстве и никуда не отправляется."
+    "q": "Можно ли разделить конфиденциальный PDF без загрузки?",
+    "a": "Да. PDF делится в браузере на устройстве и никуда не отправляется."
    },
    {
-    "q": "Сохраняются ли метаданные исходного PDF при разделении?",
-    "a": "Нет. В новые файлы не переносятся свойства документа (автор, программа создания, производитель PDF) и метаданные XMP. Данные, нужные для показа страниц, сохраняются как есть: например, шрифты, цветовые профили ICC, изображения JPEG 2000 и встроенные (inline) изображения. Поля форм и введённые в них значения, вложения и JavaScript тоже не копируются. Ссылки на сайты и адреса электронной почты сохраняются, а ссылки на другие страницы внутри документа и комментарии удаляются."
+    "q": "Сохраняются ли метаданные исходного PDF?",
+    "a": "Нет. Author, Creator, Producer и XMP не переносятся. Шрифты, ICC и встроенные изображения для показа страниц сохраняются. Формы, вложения и JavaScript не копируются."
+   },
+   {
+    "q": "Какие лимиты по размеру и страницам?",
+    "a": "Один файл до 100 МБ. За запуск: до 1000 страниц в части, до 5000 суммарно и до 50 частей. Запароленные PDF не поддерживаются."
    }
   ],
   "organize": [
@@ -214,28 +222,28 @@
   ],
   "jpg": [
    {
-    "q": "Как перевести JPG в PDF?",
-    "a": "Выберите изображения JPG или PNG или перетащите их на страницу. Задайте порядок и размер страницы, нажмите «Создать PDF» и скачайте файл."
-   },
-   {
-    "q": "Какие форматы изображений можно перевести в PDF?",
-    "a": "JPG и PNG. Каждое изображение — до 50 мегапикселей. Если фото в формате HEIC, сначала переведите их в JPG с помощью нашего конвертера HEIC в JPG."
+    "q": "Как объединить JPG в PDF?",
+    "a": "Выберите изображения JPG или PNG или перетащите их на страницу. Задайте порядок и размер страницы (A4 или как у картинки), нажмите «Создать PDF» и скачайте файл."
    },
    {
     "q": "Можно ли собрать несколько JPG в один PDF?",
-    "a": "Да. Добавьте до 50 изображений за раз, задайте порядок перетаскиванием или кнопками перемещения — каждое изображение станет страницей одного PDF."
+    "a": "Да. Добавьте до 50 изображений за раз, выставьте порядок перетаскиванием или кнопками — каждое станет страницей одного PDF."
    },
    {
-    "q": "Какой размер страницы используется при переводе JPG в PDF?",
-    "a": "Можно выбрать A4 или подогнать каждую страницу под размер её изображения."
+    "q": "Какие форматы изображений принимаются?",
+    "a": "Только JPG и PNG. Каждое изображение — до 50 мегапикселей. HEIC сначала переведите в JPG через конвертер HEIC в JPG."
    },
    {
-    "q": "Ухудшается ли качество изображений при переводе в PDF?",
-    "a": "Нет. JPG вставляются в PDF без повторного сжатия, а PNG сохраняются без потерь, поэтому качество не меняется."
+    "q": "Какой размер страницы можно выбрать?",
+    "a": "A4 или подогнать каждую страницу под размер её изображения."
    },
    {
-    "q": "Сохраняются ли в PDF данные о местоположении из фото?",
-    "a": "Нет. Данные EXIF и геолокация удаляются из фото до того, как они попадут в PDF."
+    "q": "Ухудшается ли качество при переводе в PDF?",
+    "a": "Нет. JPG вставляются без повторного сжатия, PNG сохраняются без потерь."
+   },
+   {
+    "q": "Остаётся ли в PDF геолокация из фото?",
+    "a": "Нет. EXIF и GPS удаляются из фото до попадания в PDF."
    }
   ]
  },
@@ -290,24 +298,28 @@
   ],
   "split": [
    {
-    "q": "如何将 PDF 拆分为多个文件？",
-    "a": "添加 PDF，选择“按范围”或“每 N 页”。点击“拆分”，生成的文件将打包为一个 ZIP 一起下载。"
+    "q": "如何把一个 PDF 拆成 2 个文件？",
+    "a": "添加 PDF，选择“按范围”（例如 1-5, 6-10）或“每 N 页”，点击“拆分”。多个文件会打成一个 ZIP 下载。"
    },
    {
-    "q": "如何从 PDF 中提取单页或连续的几页？",
-    "a": "选择“提取页面”，在缩略图上选中所需页面，它们将保存为一个新的 PDF。也可以在“按范围”中输入单页（如 5）或页码范围（如 2-4）。"
+    "q": "如何提取单页或连续几页？",
+    "a": "用“提取页面”并在缩略图上勾选，得到一个新 PDF；或在“按范围”中输入如 5 或 2-4。"
    },
    {
-    "q": "拆分 PDF 时如何输入页码范围？",
-    "a": "用逗号分隔页码，用连字符表示范围，例如：1-3, 5, 8-10。这个例子会生成三个文件，拆分前工具会先显示结果。"
+    "q": "页码范围怎么写？",
+    "a": "用逗号分隔，用连字符表示范围，例如 1-3, 5, 8-10。该例会生成三个文件，拆分前会显示计划。"
    },
    {
-    "q": "可以在不上传的情况下拆分机密 PDF 吗？",
-    "a": "可以。PDF 在您设备上的浏览器中拆分，绝不会发送到服务器。"
+    "q": "可以不上传就拆分机密 PDF 吗？",
+    "a": "可以。拆分在设备上的浏览器中完成，不会发送到服务器。"
    },
    {
-    "q": "拆分后的 PDF 会保留原始元数据吗？",
-    "a": "不会。新文件不会保留作者、创建程序、PDF 生成器等文档属性以及 XMP 元数据。显示页面所需的数据会原样保留，例如字体、ICC 颜色配置文件、JPEG 2000 图片和内嵌（inline）图片。表单字段及其中填写的内容、附件和 JavaScript 也不会被复制。网页链接和电子邮件链接会保留；跳转到文档内其他页面的链接和注释会被删除。"
+    "q": "拆分后会保留原文档元数据吗？",
+    "a": "不会。Author、Creator、Producer 与 XMP 不保留。字体、ICC 与内嵌图片会保留。表单、附件和 JavaScript 不复制。"
+   },
+   {
+    "q": "大小和页数限制是多少？",
+    "a": "单文件不超过 100 MB。单次：每个分册最多 1000 页，合计最多 5000 页，最多 50 个分册。不支持加密 PDF。"
    }
   ],
   "organize": [
@@ -335,27 +347,27 @@
   "jpg": [
    {
     "q": "如何将 JPG 转换为 PDF？",
-    "a": "选择 JPG 或 PNG 图片，或将其拖放到页面上。设置顺序和页面大小，点击“创建 PDF”，然后下载文件。"
+    "a": "选择 JPG 或 PNG，或拖放到页面。设置顺序和页面大小（A4 或与图片相同），点击“创建 PDF”并下载。"
    },
    {
-    "q": "哪些图片格式可以转换为 PDF？",
-    "a": "支持 JPG 和 PNG 图片，每张图片不超过 5000 万像素。如果您的照片是 HEIC 格式，请先用我们的 HEIC 转 JPG 转换器将其转换为 JPG。"
+    "q": "可以把多张 JPG 合成一个 PDF 吗？",
+    "a": "可以。一次最多 50 张，拖动或用按钮排序，每张成为同一 PDF 中的一页。"
    },
    {
-    "q": "可以把多张 JPG 图片合成一个 PDF 吗？",
-    "a": "可以。一次最多添加 50 张图片，通过拖动或移动按钮设置顺序，每张图片都会成为同一个 PDF 中的一页。"
+    "q": "支持哪些图片格式？",
+    "a": "仅 JPG 和 PNG，每张不超过 50 兆像素。HEIC 请先用 HEIC 转 JPG 转换。"
    },
    {
-    "q": "JPG 转 PDF 使用什么页面大小？",
-    "a": "您可以选择 A4，也可以让每页与对应图片的尺寸相同。"
+    "q": "页面大小如何选择？",
+    "a": "可选 A4，或让每页与对应图片尺寸相同。"
    },
    {
-    "q": "JPG 转 PDF 会降低图片质量吗？",
-    "a": "不会。JPG 图片放入 PDF 时不会被重新压缩，PNG 图片以无损方式保存，因此质量保持不变。"
+    "q": "会降低图片质量吗？",
+    "a": "不会。JPG 不重新压缩，PNG 无损保存。"
    },
    {
-    "q": "照片中的位置信息会保留在 PDF 中吗？",
-    "a": "不会。照片放入 PDF 之前，EXIF 数据和 GPS 位置信息会被删除。"
+    "q": "照片位置信息会保留吗？",
+    "a": "不会。写入 PDF 前会删除 EXIF 与 GPS。"
    }
   ]
  }

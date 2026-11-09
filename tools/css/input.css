@@ -63,6 +63,11 @@
   .doc pre.lic { @apply font-mono text-xs bg-base-200 rounded-box p-3 sm:p-4 whitespace-pre-wrap break-words max-w-full; }
   .h1 { @apply text-[1.75rem] leading-tight sm:text-[2.5rem] font-bold tracking-tight text-balance; scroll-margin-top: 1rem; }
   .lede { @apply mt-3 text-base sm:text-lg text-base-content/80 max-w-2xl text-pretty; }
+  .editorial-body p { @apply leading-relaxed; }
+  .editorial-body ul { @apply list-disc ps-6 my-3; }
+  .editorial-body ol { @apply list-decimal ps-6 my-3; }
+  .editorial-body li { @apply my-1; }
+  .editorial-body a { @apply link link-primary break-words; }
   /* hero (spec §2a): overflow-x:clip hides the 16px glow overflow without creating a scroll container */
   .hero { @apply relative grid gap-6 items-center; isolation: isolate; overflow-x: clip; }
   .hero::before { content: ""; @apply absolute -z-10 pointer-events-none hidden sm:block; inset: -32px -40px auto auto; width: 520px; height: 420px; max-width: 100%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent); }

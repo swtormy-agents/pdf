@@ -1,22 +1,22 @@
-# Split a PDF and extract pages
+# Split a PDF into separate files
 
 HTML version: https://noclaudkit.com/pdf/split-pdf.html
 
-Split a PDF into separate files or extract the pages you need, right in your browser. No upload, no sign-up, no watermark.
+Split one PDF into 2 or more files, or extract pages, in your browser. Ranges, every N pages, or pick pages. No upload, free, no watermark.
 
 ## Questions and answers
 
-### How do I split a PDF into separate files?
+### How do I split one PDF into 2 files?
 
-Add your PDF and choose "By ranges" or "Every N pages". Press Split, and the files download together in one ZIP.
+Add the PDF, choose By ranges (for example 1-5, 6-10) or Every N pages, press Split. Multiple outputs download together in one ZIP.
 
-### How do I extract a single page or a page range from a PDF?
+### How do I extract a single page or a page range?
 
-Choose "Extract pages" and select the pages you need on the previews; they are saved as one new PDF. You can also type a single page, like 5, or a range, like 2-4, under "By ranges".
+Choose Extract pages and select thumbnails to save one new PDF, or type a page/range under By ranges (for example 5 or 2-4).
 
-### How do I enter page ranges to split a PDF?
+### How do I enter page ranges?
 
-Separate pages with commas and write ranges with a hyphen, for example 1-3, 5, 8-10. That example makes three files, and the tool shows the result before you split.
+Separate items with commas and ranges with a hyphen, e.g. 1-3, 5, 8-10. That example makes three files; the plan is shown before you split.
 
 ### Can I split a confidential PDF without uploading it?
 
@@ -24,7 +24,11 @@ Yes. The PDF is split in your browser on your device and is never sent to a serv
 
 ### Does a split PDF keep the original metadata?
 
-No. The new files do not carry over document metadata such as Author, Creator, Producer or XMP. Data needed to display the pages, for example fonts, ICC profiles, and JPEG 2000 or inline images, is kept as is. Form fields and the values typed into them, attachments and JavaScript are also not copied. Web and email links are kept; links that jump to another page inside the document and comments are removed.
+No. Author, Creator, Producer and XMP are not carried over. Display data such as fonts, ICC profiles and embedded images is kept. Forms, attachments and JavaScript are not copied.
+
+### What are the size and page limits?
+
+One file up to 100 MB. Per run: up to 1,000 pages per output part, 5,000 pages across all parts, and up to 50 parts. Password-protected PDFs are not supported.
 
 ## Other PDF tools
 

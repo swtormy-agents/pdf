@@ -15,9 +15,9 @@ Files are processed in your browser and never leave your device. Free and open s
 
 - [PDF: merge, split, reorder](https://noclaudkit.com/pdf/index.md)
 - [Merge PDF files without uploading](https://noclaudkit.com/pdf/merge-pdf.md)
-- [Split a PDF and extract pages](https://noclaudkit.com/pdf/split-pdf.md)
+- [Split a PDF into separate files](https://noclaudkit.com/pdf/split-pdf.md)
 - [Reorder, delete and rotate PDF pages](https://noclaudkit.com/pdf/organize-pdf.md)
-- [JPG and photos to PDF](https://noclaudkit.com/pdf/jpg-to-pdf.md)
+- [Combine JPG and PNG into one PDF](https://noclaudkit.com/pdf/jpg-to-pdf.md)
 - [Privacy](https://noclaudkit.com/pdf/privacy.md)
 - [Licences](https://noclaudkit.com/pdf/licenses.md)
 

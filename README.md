@@ -18,7 +18,7 @@ Part of [NoClaudKit](https://noclaudkit.com/) — more browser tools: [Image con
 | `assets/vendor/pdf.min.js`, `pdf.worker.min.js` | pdfjs-dist, self-hosted, copied verbatim |
 | `build/app.css` | Tailwind 4 + daisyUI 5 build of `tools/css/input.css` |
 | `theme.js`, `assets/icons/` | theme switcher and its icons |
-| `tools/gen.py` | page generator (runs `sync_i18n.py` first; strings live with their owners under `/workspace/i18n`, `/workspace/seo`, `/workspace/company/legal`) |
+| `tools/gen.py` | page generator (runs `sync_i18n.py` first; strings live with their owners under `/workspace/i18n`, `/workspace/seo`, `/workspace/company/legal`; in shallow clones it runs `git fetch` so sitemap `lastmod` has real per-file history) |
 | `tools/i18n/` | synced copies of the UI, SEO, FAQ and privacy strings |
 | `tools/src/` | UI (`app.js`), processing worker (`worker.js`), ZIP writer (`zip.js`) |
 | `tools/scripts/` | JS build/check, CSS check, licence check |
